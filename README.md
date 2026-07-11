@@ -36,7 +36,7 @@ npm run dev:web            # http://localhost:3000
 - [ ] Step 6 — Indexed weighted-random query at full catalog scale (current `/spin` route works but hasn't been load-tested past a few hundred titles)
 - [x] Step 7 — Core `/spin` API (reference-list endpoints for genres/moods/languages/collections still TODO)
 - [x] Step 8 — Basic filter bar UI (mood pills + rating slider only so far — genre/language/runtime/type still TODO)
-- [ ] Step 9 — Spin button + shuffle/reveal animation (Framer Motion is installed, animation not built yet)
+- [x] Step 9 — Spin button + shuffle/reveal animation. Signature element: `SpinReel.tsx` — a film-strip reel (sprocket rails, motion) that does a fast pass, one deliberate near-miss false-stop, a corrective snap, then locks with a `MarqueeBorder` chasing-bulb reveal tied to the brand name. Synthesized tick/thud/ding sounds via `useSpinSound.ts` (no audio assets). Full `prefers-reduced-motion` fallback skips straight to the result.
 - [x] Step 10 — Result card + "why this pick" UI (minimal version)
 - [ ] Step 11 — Reroll + no-repeat session logic (schema supports it via `UserInteraction`, route doesn't write interactions yet)
 - [ ] Steps 12+ — permalinks, watch-provider sync, Redis cache, analytics, beta, etc.
