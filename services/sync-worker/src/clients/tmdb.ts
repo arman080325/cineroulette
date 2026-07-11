@@ -47,6 +47,13 @@ export interface TmdbMovie {
   poster_path: string | null;
 }
 
+export interface TmdbWatchProviderRegion {
+  link: string;
+  flatrate?: { provider_name: string }[];
+  rent?: { provider_name: string }[];
+  buy?: { provider_name: string }[];
+}
+
 export const tmdb = {
   genres: (mediaType: "movie" | "tv") =>
     tmdbGet<{ genres: TmdbGenre[] }>(`/genre/${mediaType}/list`),
@@ -62,4 +69,7 @@ export const tmdb = {
 
   movieDetails: (id: number) =>
     tmdbGet<TmdbMovie & { runtime: number }>(`/movie/${id}`),
+
+  watchProviders: (id: number) =>
+    tmdbGet<{ results: Record<string, TmdbWatchProviderRegion> }>(`/movie/${id}/watch/providers`),
 };
