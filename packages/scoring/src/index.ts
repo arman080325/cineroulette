@@ -95,9 +95,32 @@ export function weightedRandomPick<T extends { score: number }>(candidates: T[])
     r -= Math.max(c.score, 0.0001);
     if (r <= 0) return c;
   }
-  return candidates[candidates.length - 1];
+// Safe: candidates.length > 0 is guaranteed by the check at the top of
+  // this function, so this index is never actually out of bounds — the
+  // non-null assertion just tells TS what we already proved above.
+  return candidates[candidates.length - 1]!;
 }
 
 function clamp01(n: number): number {
   return Math.min(1, Math.max(0, n));
+}
+// Human-readable labels for score components — shared between /spin and the
+// permalinked /title/{id} page so both explain a pick the same way.
+export const SCORE_COMPONENT_LABELS: Record<string, string> = {
+  popularity: "popularity",
+  rating: "audience rating",
+  critic: "critical acclaim",
+  recencyTrend: "current buzz",
+  awards: "awards pedigree",
+  moodMatch: "mood match",
+  languageRelevance: "language fit",
+  streamingAvailable: "availability",
+};
+
+export function explainScore(components: Record<string, number>): string {
+  const top = Object.entries(components)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 2)
+    .map(([k]) => SCORE_COMPONENT_LABELS[k] ?? k);
+  return `Picked for strong ${top.join(" and ")}.`;
 }

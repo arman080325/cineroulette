@@ -19,6 +19,11 @@ import { tmdb, TmdbMovie } from "../clients/tmdb";
 
 const PAGES_PER_RUN = Number(process.env.SYNC_PAGES_PER_RUN ?? 5);
 
+// Regions to sync watch-provider links for. Kept small on purpose — Section
+// 19 flags this table for a shorter sync TTL since links go stale; more
+// regions later once this proves worth the extra TMDB calls per title.
+const WATCH_REGIONS = ["US", "IN"];
+
 function normalize(value: number, min: number, max: number): number {
   if (max === min) return 0.5;
   return (value - min) / (max - min);
@@ -59,6 +64,43 @@ async function upsertTitle(m: TmdbMovie): Promise<string> {
   return title.id;
 }
 
+async function syncWatchProvidersForTitle(titleId: string, tmdbId: number) {
+  try {
+    const { results } = await tmdb.watchProviders(tmdbId);
+
+    // Idempotent: clear this title's existing provider rows before re-inserting,
+    // so a rerun never duplicates rows (Section 22 standard).
+    await prisma.watchProvider.deleteMany({ where: { titleId } });
+
+    for (const region of WATCH_REGIONS) {
+      const regionData = results[region];
+      if (!regionData) continue;
+
+      const categories: { list: { provider_name: string }[] | undefined; type: string }[] = [
+        { list: regionData.flatrate, type: "subscription" },
+        { list: regionData.rent, type: "rent" },
+        { list: regionData.buy, type: "buy" },
+      ];
+
+      for (const { list, type } of categories) {
+        for (const provider of list ?? []) {
+          await prisma.watchProvider.create({
+            data: {
+              titleId,
+              providerName: provider.provider_name,
+              region,
+              link: regionData.link,
+              type,
+            },
+          });
+        }
+      }
+    }
+  } catch {
+    // Non-fatal — a title without watch-provider data just shows no links, not a broken sync.
+  }
+}
+
 export async function syncTitles() {
   let upserted = 0;
   const batch: TmdbMovie[] = [];
@@ -69,12 +111,12 @@ export async function syncTitles() {
   }
 
   const popularities = batch.map((m) => m.popularity);
-  const ratings = batch.map((m) => m.vote_average / 10); // TMDB is 0-10
   const minPop = Math.min(...popularities);
   const maxPop = Math.max(...popularities);
 
   for (const m of batch) {
     const titleId = await upsertTitle(m);
+    await syncWatchProvidersForTitle(titleId, m.id);
 
     const base = computeBaseScore({
       popularityNorm: normalize(m.popularity, minPop, maxPop),

@@ -46,6 +46,31 @@ npm run dev:web            # http://localhost:3000
 - Region-relative score normalization (Section 07) is currently a simple global min-max per sync batch, not per-language/region — see comment in `syncTitles.ts`.
 - Mood-vector tagging (`TitleMood`) has no data source yet — Section 28 open question, needs either TMDB keyword mapping or a supplemental tagging pass before the mood filter actually does anything.
 - `/spin` doesn't yet write to `UserInteraction` on each shown result, so "no immediate repeat on reroll" isn't wired up end-to-end.
+- `Save` / `Not Interested` buttons are inert — don't hit `/api/v1/interactions` yet.
+- `runtimeMinutes` is defined in the schema but the sync worker never populates it (would need a per-title `movieDetails` call, not just `discover`) — the ticket's runtime badge is ready in the UI once this lands.
+
+## UI/UX pass (July 12) — fixed a real bug, then restyled
+
+The poster wasn't "fitting" because of an actual pixel-drift bug: the reel's
+`translateY` step size didn't account for the `gap` between filler cards, so
+by the final card the strip had drifted ~120px off-frame — that's the double
+box you saw in the screenshot. Fixed by giving every reel slot a fixed,
+explicit height + margin (`STEP` constant in `SpinReel.tsx`) instead of
+relying on flexbox gap. The reel window is also now sized to a real poster's
+2:3 ratio (300×450) instead of a roughly-square frame, so posters fill it
+without cropping oddly.
+
+Restyled around a distinct "cinema ticket" identity rather than generic dark
+mode: Bebas Neue for display type (reads like real marquee lettering) paired
+with Inter for body copy, a gold (`#ffd36a`) accent alongside the marquee
+red, a film-grain overlay + radial spotlight instead of flat black, and the
+result card is shaped like a torn ticket stub — a perforated divider with
+punched notches separates the poster from an "Admit One" details section
+showing rating and genre chips (now returned by `/spin`, see route.ts).
+
+Next candidates: poster-wall backdrop texture behind the idle hero, wiring
+Save/Not Interested to `/api/v1/interactions`, and populating `runtimeMinutes`
+at sync time so the runtime badge has data to show.
 
 ## Next session
 

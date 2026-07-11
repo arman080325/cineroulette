@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@cineroulette/db";
-import { weightedRandomPick } from "@cineroulette/scoring";
-
+import { weightedRandomPick, explainScore } from "@cineroulette/scoring";
 /**
  * POST /api/v1/spin — Section 17 API design, FR-2/FR-4/FR-6.
  * body: { type?, genre?: string[], language?, minRating?, runtime?, exclude?: string[], collectionSlug?, sessionId? }
@@ -23,6 +22,7 @@ interface SpinRequestBody {
 
 const CANDIDATE_POOL_SIZE = 200; // fetch top-N by score within filters, then weighted-draw among them
 
+
 export async function POST(req: NextRequest) {
   const body = (await req.json()) as SpinRequestBody;
   const region = body.region ?? "GLOBAL";
@@ -30,13 +30,13 @@ export async function POST(req: NextRequest) {
   // Titles the session has already been shown recently, so Reroll never repeats (FR-4)
   const recentlyShownIds = body.sessionId
     ? (
-        await prisma.userInteraction.findMany({
-          where: { sessionId: body.sessionId },
-          select: { titleId: true },
-          orderBy: { createdAt: "desc" },
-          take: 20,
-        })
-      ).map((r) => r.titleId)
+      await prisma.userInteraction.findMany({
+        where: { sessionId: body.sessionId },
+        select: { titleId: true },
+        orderBy: { createdAt: "desc" },
+        take: 20,
+      })
+    ).map((r) => r.titleId)
     : [];
 
   const candidates = await prisma.recommendationScore.findMany({
@@ -54,7 +54,15 @@ export async function POST(req: NextRequest) {
     },
     orderBy: { computedScore: "desc" },
     take: CANDIDATE_POOL_SIZE,
-    include: { title: true },
+    include: {
+      title: {
+        include: {
+          genres: { include: { genre: true } },
+          ratings: { orderBy: { updatedAt: "desc" }, take: 1 },
+          watchProviders: { where: { region: "US" } },
+        },
+      },
+    },
   });
 
   if (candidates.length === 0) {
@@ -69,6 +77,8 @@ export async function POST(req: NextRequest) {
     candidates.map((c) => ({ score: c.computedScore, ref: c }))
   ).ref;
 
+  const latestRating = picked.title.ratings[0];
+
   return NextResponse.json({
     title: {
       id: picked.title.id,
@@ -77,15 +87,15 @@ export async function POST(req: NextRequest) {
       runtimeMinutes: picked.title.runtimeMinutes,
       overview: picked.title.overview,
       posterPath: picked.title.posterPath,
+      voteAverage: latestRating?.voteAverage ?? null,
+      genres: picked.title.genres.map((g) => g.genre.name).slice(0, 3),
+      watchProviders: picked.title.watchProviders.map((w) => ({
+        name: w.providerName,
+        type: w.type,
+        link: w.link,
+      })),
     },
-    scoreExplanation: buildExplanation(picked.componentsJson as Record<string, number>),
+    scoreExplanation: explainScore(picked.componentsJson as Record<string, number>),
   });
 }
 
-function buildExplanation(components: Record<string, number>): string {
-  const top = Object.entries(components)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 2)
-    .map(([k]) => k);
-  return `Recommended because of strong ${top.join(" and ")} match.`;
-}
