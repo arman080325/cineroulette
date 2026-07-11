@@ -1,0 +1,176 @@
+// CineRoulette core schema — Section 16 of the Master Design Document
+// Postgres via Neon. Run `npm run db:generate` then `npm run db:migrate` from repo root.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum TitleType {
+  MOVIE
+  TV_SERIES
+  MINI_SERIES
+  ANIME
+  DOCUMENTARY
+  SHORT_FILM
+}
+
+enum InteractionAction {
+  WATCHED
+  NOT_INTERESTED
+  SAVED
+}
+
+model Title {
+  id              String   @id @default(uuid())
+  tmdbId          Int      @unique
+  type            TitleType
+  title           String
+  originalTitle   String?
+  releaseYear     Int?
+  runtimeMinutes  Int?
+  overview        String?
+  posterPath      String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  genres          TitleGenre[]
+  moods           TitleMood[]
+  languages       TitleLanguage[]
+  ratings         Rating[]
+  scores          RecommendationScore[]
+  watchProviders  WatchProvider[]
+  collections     CollectionTitle[]
+  interactions    UserInteraction[]
+
+  @@index([type, releaseYear])
+}
+
+model Genre {
+  id     String       @id @default(uuid())
+  name   String       @unique
+  titles TitleGenre[]
+}
+
+model TitleGenre {
+  titleId String
+  genreId String
+  title   Title @relation(fields: [titleId], references: [id])
+  genre   Genre @relation(fields: [genreId], references: [id])
+
+  @@id([titleId, genreId])
+}
+
+// Mood-vector tagging — powers Mood-match scoring, Section 07
+model TitleMood {
+  id       String  @id @default(uuid())
+  titleId  String
+  moodTag  String
+  weight   Float   @default(1.0)
+  title    Title   @relation(fields: [titleId], references: [id])
+
+  @@index([moodTag])
+}
+
+model Language {
+  code   String          @id // ISO 639-1
+  name   String
+  titles TitleLanguage[]
+}
+
+model TitleLanguage {
+  titleId       String
+  languageCode  String
+  isOriginal    Boolean @default(false)
+  dubAvailable  Boolean @default(false)
+  subAvailable  Boolean @default(false)
+  title         Title    @relation(fields: [titleId], references: [id])
+  language      Language @relation(fields: [languageCode], references: [code])
+
+  @@id([titleId, languageCode])
+}
+
+// Raw inputs to the score engine
+model Rating {
+  id           String   @id @default(uuid())
+  titleId      String
+  voteAverage  Float?
+  voteCount    Int?
+  popularity   Float?
+  criticScore  Float?
+  updatedAt    DateTime @updatedAt
+  title        Title    @relation(fields: [titleId], references: [id])
+
+  @@index([titleId])
+}
+
+// Precomputed per sync run — this is what /spin actually queries
+model RecommendationScore {
+  id             String   @id @default(uuid())
+  titleId        String
+  region         String   // e.g. "GLOBAL" or a region code for region-relative scoring
+  computedScore  Float
+  componentsJson Json
+  computedAt     DateTime @default(now())
+  title          Title    @relation(fields: [titleId], references: [id])
+
+  @@unique([titleId, region])
+  @@index([region, computedScore])
+}
+
+// Shorter-TTL sync target (Section 19)
+model WatchProvider {
+  id           String  @id @default(uuid())
+  titleId      String
+  providerName String
+  region       String
+  link         String
+  type         String  // e.g. "subscription" | "rent" | "buy"
+  title        Title   @relation(fields: [titleId], references: [id])
+
+  @@index([titleId, region])
+}
+
+model Collection {
+  id     String            @id @default(uuid())
+  slug   String            @unique
+  name   String
+  titles CollectionTitle[]
+}
+
+model CollectionTitle {
+  collectionId String
+  titleId      String
+  collection   Collection @relation(fields: [collectionId], references: [id])
+  title        Title      @relation(fields: [titleId], references: [id])
+
+  @@id([collectionId, titleId])
+}
+
+// Feeds personalization + score weighting (Section 07, 11)
+model UserInteraction {
+  id         String             @id @default(uuid())
+  userId     String?
+  sessionId  String?
+  titleId    String
+  action     InteractionAction
+  createdAt  DateTime           @default(now())
+  title      Title              @relation(fields: [titleId], references: [id])
+
+  @@index([sessionId])
+  @@index([userId])
+}
+
+// Observability across all synced sources (Section 16)
+model SyncLog {
+  id             String   @id @default(uuid())
+  runAt          DateTime @default(now())
+  source         String   // "tmdb" | "omdb" | "justwatch" | "wikidata"
+  titlesUpserted Int      @default(0)
+  status         String   // "success" | "partial" | "failed"
+  error          String?
+}
