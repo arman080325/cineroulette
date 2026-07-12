@@ -2,19 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@cineroulette/db";
 import { weightedRandomPick, explainScore } from "@cineroulette/scoring";
 import { getRecentlyShown, pushRecentlyShown, getCachedCandidates, setCachedCandidates } from "@/lib/redis";
-
-/**
- * POST /api/v1/spin — Section 17 API design, FR-2/FR-4/FR-6.
- *
- * Section 19 Redis usage, two distinct caches:
- * 1. Per-session "recently shown" list — was a Postgres query on every
- *    spin; now a fast Redis list, since it's ephemeral session state, not
- *    something that needs to live in the durable catalog DB.
- * 2. Hot filter-combo cache — identical filter combos within a short TTL
- *    skip the Prisma query entirely. Scores only change at sync time
- *    (Section 07), so this is safe to cache briefly without going stale
- *    in a way that matters.
- */
+import { trackServerEvent } from "@/lib/analytics-server";
 
 interface SpinRequestBody {
   type?: "MOVIE" | "TV_SERIES" | "MINI_SERIES" | "ANIME" | "DOCUMENTARY" | "SHORT_FILM";
@@ -45,8 +33,6 @@ interface CandidateForPick {
 const CANDIDATE_POOL_SIZE = 200;
 
 function buildComboKey(body: SpinRequestBody, region: string): string {
-  // Deliberately excludes sessionId — the combo cache is shared across all
-  // users with the same filters, only the recently-shown exclusion is per-user.
   return JSON.stringify({
     region,
     type: body.type ?? null,
@@ -108,9 +94,14 @@ export async function POST(req: NextRequest) {
 
   const recentlyShownIds = await getRecentlyShown(body.sessionId ?? "");
   const available = candidates.filter((c) => !recentlyShownIds.includes(c.title.id));
-  const pool = available.length > 0 ? available : candidates; // if everything's been shown, allow repeats rather than dead-end
+  const pool = available.length > 0 ? available : candidates;
 
   if (pool.length === 0) {
+    await trackServerEvent(body.sessionId ?? "anonymous", "spin_empty_result", {
+      genre: body.genre ?? null,
+      language: body.language ?? null,
+      minRating: body.minRating ?? null,
+    });
     return NextResponse.json(
       { error: null, result: null, message: "No titles match these filters yet." },
       { status: 200 }
@@ -126,6 +117,14 @@ export async function POST(req: NextRequest) {
       data: { titleId: picked.title.id, action: "SHOWN", sessionId: body.sessionId },
     });
   }
+
+  await trackServerEvent(body.sessionId ?? "anonymous", "spin_completed", {
+    titleId: picked.title.id,
+    genre: body.genre ?? null,
+    language: body.language ?? null,
+    minRating: body.minRating ?? null,
+    candidatePoolSize: pool.length,
+  });
 
   return NextResponse.json({
     title: {

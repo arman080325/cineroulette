@@ -1,6 +1,7 @@
 import "./globals.css";
 import type { Metadata } from "next";
 import { Bebas_Neue, Inter } from "next/font/google";
+import { AnalyticsInit } from "@/components/AnalyticsInit";
 
 // Bebas Neue reads exactly like physical marquee/poster lettering — the one
 // deliberate typographic risk this design takes. Inter carries body copy so
@@ -25,6 +26,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={`${display.variable} ${body.variable}`}>
       <body>
+        <AnalyticsInit />
         <div className="grain-overlay" aria-hidden="true" />
         {children}
         {/* TMDB attribution — required, Section 14 */}

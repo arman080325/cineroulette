@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { SpinReel, SpinReelResult } from "@/components/SpinReel";
 import { getSessionId } from "@/lib/session";
+import { track } from "@/lib/analytics-client";
 
 const MOODS = [
   { label: "feel-good", icon: "😊" },
@@ -34,7 +35,6 @@ export default function HomePage() {
   const [message, setMessage] = useState<string | null>(null);
   const [interaction, setInteraction] = useState<InteractionState>("idle");
 
-  // Anonymous session id (Section 20) — generated once on the client, never sent anywhere but our own API.
   useEffect(() => {
     setSessionId(getSessionId());
     fetch("/api/v1/genres")
@@ -48,6 +48,8 @@ export default function HomePage() {
   }, []);
 
   async function spin() {
+    track("spin_started", { genre: selectedGenre, language: selectedLanguage || null, minRating });
+
     setStage("revving");
     setMessage(null);
     setExplanation("");
@@ -99,6 +101,10 @@ export default function HomePage() {
     }
   }
 
+  function trackWatchClick(providerName: string) {
+    track("watch_provider_clicked", { titleId: result?.id, provider: providerName });
+  }
+
   return (
     <main className="relative min-h-screen text-white flex flex-col items-center px-4 py-16 overflow-hidden">
       <div className="hero-spotlight" />
@@ -117,10 +123,11 @@ export default function HomePage() {
               <button
                 key={m.label}
                 onClick={() => setMood(mood === m.label ? null : m.label)}
-                className={`px-4 py-2 rounded-pill text-sm font-body border transition-all flex items-center gap-1.5 ${mood === m.label
-                  ? "bg-marquee border-marquee shadow-glow"
-                  : "border-neutral-700 hover:border-gold/60 hover:text-gold"
-                  }`}
+                className={`px-4 py-2 rounded-pill text-sm font-body border transition-all flex items-center gap-1.5 ${
+                  mood === m.label
+                    ? "bg-marquee border-marquee shadow-glow"
+                    : "border-neutral-700 hover:border-gold/60 hover:text-gold"
+                }`}
               >
                 <span>{m.icon}</span>
                 {m.label}
@@ -221,6 +228,7 @@ export default function HomePage() {
                     </span>
                   ))}
                 </div>
+
                 {result.overview && (
                   <p className="text-neutral-400 mt-4 text-sm leading-relaxed font-body">{result.overview}</p>
                 )}
@@ -231,13 +239,13 @@ export default function HomePage() {
                       .slice(0, 4)
                       .map((name) => {
                         const provider = result.watchProviders!.find((w) => w.name === name)!;
-
                         return (
-                          <a
+                        <a
                             key={name}
                             href={provider.link}
                             target="_blank"
                             rel="noopener noreferrer"
+                            onClick={() => trackWatchClick(name)}
                             className="px-2.5 py-1 rounded-pill border border-neutral-700 text-neutral-300 hover:border-gold/60 hover:text-gold transition"
                           >
                             ▶ {name}
@@ -259,20 +267,22 @@ export default function HomePage() {
                   <button
                     onClick={() => sendInteraction("SAVED")}
                     disabled={interaction === "saved"}
-                    className={`px-5 py-2.5 rounded-2xl border transition ${interaction === "saved"
-                      ? "border-gold text-gold"
-                      : "border-neutral-700 hover:border-gold/60 hover:text-gold"
-                      }`}
+                    className={`px-5 py-2.5 rounded-2xl border transition ${
+                      interaction === "saved"
+                        ? "border-gold text-gold"
+                        : "border-neutral-700 hover:border-gold/60 hover:text-gold"
+                    }`}
                   >
                     {interaction === "saved" ? "✓ Saved" : "❤️ Save"}
                   </button>
                   <button
                     onClick={() => sendInteraction("NOT_INTERESTED")}
                     disabled={interaction === "not-interested"}
-                    className={`px-5 py-2.5 rounded-2xl border transition ${interaction === "not-interested"
-                      ? "border-neutral-600 text-neutral-600"
-                      : "border-neutral-700 hover:border-neutral-500 text-neutral-400"
-                      }`}
+                    className={`px-5 py-2.5 rounded-2xl border transition ${
+                      interaction === "not-interested"
+                        ? "border-neutral-600 text-neutral-600"
+                        : "border-neutral-700 hover:border-neutral-500 text-neutral-400"
+                    }`}
                   >
                     {interaction === "not-interested" ? "Noted" : "✋ Not Interested"}
                   </button>
@@ -289,8 +299,7 @@ export default function HomePage() {
             </div>
           )}
         </div>
-      )
-      }
-    </main >
+      )}
+    </main>
   );
 }
