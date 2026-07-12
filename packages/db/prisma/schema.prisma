@@ -21,6 +21,7 @@ enum TitleType {
 }
 
 enum InteractionAction {
+  SHOWN
   WATCHED
   NOT_INTERESTED
   SAVED

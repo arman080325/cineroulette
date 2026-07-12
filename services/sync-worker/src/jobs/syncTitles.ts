@@ -7,27 +7,18 @@ import { tmdb, TmdbMovie } from "../clients/tmdb";
  * Build order Step 4 (bulk import) + Step 5 (score computation), combined
  * into one idempotent job per Section 22 engineering standards.
  *
- * Broadened per production-readiness pass: pulls per-language, not just
- * global popularity, so smaller industries (Korean, Nollywood, regional
- * Indian, etc.) actually get synced instead of buried under Hollywood's
- * raw volume — Section 07's core differentiator, not a nice-to-have.
- *
- * Region-relative score normalization (the TODO flagged since the first
- * version of this file) is now implemented: popularity is normalized
- * within each title's own original_language group, not against one global
- * min/max. It's still a simplification — Section 07 describes normalizing
- * against a full region's rating/vote-count distribution, and this only
- * groups by language, not a proper geographic region — but it's the real
- * mechanism now, not a placeholder.
+ * Fix (this pass): upsertTitle previously never wrote TitleGenre or
+ * TitleLanguage join rows, so genre/language filters were structurally
+ * guaranteed to return zero results regardless of catalog size — not a
+ * "not enough data" problem, a "the link never existed" problem. Now
+ * builds a TMDB genre_id -> our Genre.id map once per run and links both
+ * genres and original_language for every synced title.
  */
 
 const PAGES_GLOBAL = Number(process.env.SYNC_PAGES_PER_RUN ?? 5);
 const PAGES_PER_LANGUAGE = Number(process.env.SYNC_PAGES_PER_LANGUAGE ?? 3);
 const CONCURRENCY = Number(process.env.SYNC_CONCURRENCY ?? 8);
 
-// A deliberately curated "truly global" spread (Section 01 core value),
-// not just whatever TMDB happens to have the most of. Configurable via env
-// so this can grow without another code change.
 const LANGUAGES = (process.env.SYNC_LANGUAGES ?? "en,hi,ko,ja,fr,es,de,it,zh,tr,pt,ru")
   .split(",")
   .map((s) => s.trim())
@@ -43,6 +34,19 @@ async function processInChunks<T>(items: T[], size: number, fn: (item: T) => Pro
     const chunk = items.slice(i, i + size);
     await Promise.all(chunk.map(fn));
   }
+}
+
+async function buildGenreIdToOurIdMap(): Promise<Map<number, string>> {
+  const { genres: tmdbGenres } = await tmdb.genres("movie");
+  const ourGenres = await prisma.genre.findMany({ select: { id: true, name: true } });
+  const nameToOurId = new Map(ourGenres.map((g) => [g.name, g.id]));
+
+  const map = new Map<number, string>();
+  for (const g of tmdbGenres) {
+    const ourId = nameToOurId.get(g.name);
+    if (ourId) map.set(g.id, ourId);
+  }
+  return map;
 }
 
 async function upsertTitle(m: TmdbMovie): Promise<string> {
@@ -80,6 +84,33 @@ async function upsertTitle(m: TmdbMovie): Promise<string> {
   return title.id;
 }
 
+async function linkGenres(titleId: string, tmdbGenreIds: number[] | undefined, genreIdMap: Map<number, string>) {
+  for (const tmdbGenreId of tmdbGenreIds ?? []) {
+    const ourGenreId = genreIdMap.get(tmdbGenreId);
+    if (!ourGenreId) continue;
+    await prisma.titleGenre.upsert({
+      where: { titleId_genreId: { titleId, genreId: ourGenreId } },
+      update: {},
+      create: { titleId, genreId: ourGenreId },
+    });
+  }
+}
+
+async function linkLanguage(titleId: string, languageCode: string | undefined) {
+  if (!languageCode) return;
+  // Only link if we actually synced this language code as a reference row —
+  // avoids a foreign-key failure on a code TMDB returns that our Language
+  // table doesn't have (rare, but possible for obscure codes).
+  const exists = await prisma.language.findUnique({ where: { code: languageCode } });
+  if (!exists) return;
+
+  await prisma.titleLanguage.upsert({
+    where: { titleId_languageCode: { titleId, languageCode } },
+    update: { isOriginal: true },
+    create: { titleId, languageCode, isOriginal: true },
+  });
+}
+
 async function syncWatchProvidersForTitle(titleId: string, tmdbId: number) {
   try {
     const { results } = await tmdb.watchProviders(tmdbId);
@@ -111,16 +142,11 @@ async function syncWatchProvidersForTitle(titleId: string, tmdbId: number) {
 export async function syncTitles() {
   const byId = new Map<number, TmdbMovie>();
 
-  // Global trending pass — catches whatever's broadly popular right now,
-  // regardless of language.
   for (let page = 1; page <= PAGES_GLOBAL; page++) {
     const { results } = await tmdb.discoverMovies(page);
     for (const m of results) byId.set(m.id, m);
   }
 
-  // Per-language passes — guarantees every configured industry actually
-  // gets synced, rather than only whatever floats to the top of a single
-  // global popularity sort (which skews English-language by default).
   for (const lang of LANGUAGES) {
     for (let page = 1; page <= PAGES_PER_LANGUAGE; page++) {
       try {
@@ -134,8 +160,6 @@ export async function syncTitles() {
 
   const batch = Array.from(byId.values());
 
-  // Region-relative normalization: group by each title's own
-  // original_language, compute min/max popularity within that group only.
   const groups = new Map<string, TmdbMovie[]>();
   for (const m of batch) {
     const key = m.original_language || "unknown";
@@ -153,26 +177,26 @@ export async function syncTitles() {
     }
   }
 
+  const genreIdMap = await buildGenreIdToOurIdMap();
   let upserted = 0;
 
   await processInChunks(batch, CONCURRENCY, async (m) => {
-    // Basic sanity filter, not yet the full per-region quality floor FR-6
-    // describes — that needs a proper vote-count distribution per
-    // language, still a TODO. This just drops near-zero-engagement noise.
     if (m.vote_count < 5) return;
 
     const titleId = await upsertTitle(m);
+    await linkGenres(titleId, m.genre_ids, genreIdMap);
+    await linkLanguage(titleId, m.original_language);
     await syncWatchProvidersForTitle(titleId, m.id);
 
     const base = computeBaseScore({
       popularityNorm: popNormByTmdbId.get(m.id) ?? 0.5,
       ratingNorm: m.vote_average / 10,
       criticNorm: null,
-      recencyTrendNorm: 0.5, // TODO: derive from popularity delta across syncs
-      awardsBoost: 0, // TODO: Wikidata supplemental source, Section 14
-      moodMatch: 0, // no user context at sync time; computed at selection time
-      languageRelevance: 1, // no user context at sync time
-      streamingAvailable: 0, // TODO: JustWatch supplemental source
+      recencyTrendNorm: 0.5,
+      awardsBoost: 0,
+      moodMatch: 0,
+      languageRelevance: 1,
+      streamingAvailable: 0,
     });
 
     await prisma.recommendationScore.upsert({
