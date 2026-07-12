@@ -61,10 +61,11 @@ export const tmdb = {
   languages: () =>
     tmdbGet<{ iso_639_1: string; english_name: string; name: string }[]>("/configuration/languages"),
 
-  discoverMovies: (page: number) =>
+discoverMovies: (page: number, language?: string) =>
     tmdbGet<{ results: TmdbMovie[]; total_pages: number }>("/discover/movie", {
       page: String(page),
       sort_by: "popularity.desc",
+      ...(language ? { with_original_language: language } : {}),
     }),
 
   movieDetails: (id: number) =>

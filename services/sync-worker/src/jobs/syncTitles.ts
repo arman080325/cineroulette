@@ -7,26 +7,42 @@ import { tmdb, TmdbMovie } from "../clients/tmdb";
  * Build order Step 4 (bulk import) + Step 5 (score computation), combined
  * into one idempotent job per Section 22 engineering standards.
  *
- * NOTE on region-relative normalization (Section 07 "Why relative to
- * region matters"): a real implementation needs per-language/region
- * vote-count and popularity distributions computed BEFORE this loop, then
- * used to normalize each title against its own region's floor/ceiling
- * rather than the global max. That aggregation step is a TODO — this file
- * currently does a simple global min-max normalization per sync batch as
- * the honest starting point, flagged so it isn't mistaken for the final
- * algorithm.
+ * Broadened per production-readiness pass: pulls per-language, not just
+ * global popularity, so smaller industries (Korean, Nollywood, regional
+ * Indian, etc.) actually get synced instead of buried under Hollywood's
+ * raw volume — Section 07's core differentiator, not a nice-to-have.
+ *
+ * Region-relative score normalization (the TODO flagged since the first
+ * version of this file) is now implemented: popularity is normalized
+ * within each title's own original_language group, not against one global
+ * min/max. It's still a simplification — Section 07 describes normalizing
+ * against a full region's rating/vote-count distribution, and this only
+ * groups by language, not a proper geographic region — but it's the real
+ * mechanism now, not a placeholder.
  */
 
-const PAGES_PER_RUN = Number(process.env.SYNC_PAGES_PER_RUN ?? 5);
+const PAGES_GLOBAL = Number(process.env.SYNC_PAGES_PER_RUN ?? 5);
+const PAGES_PER_LANGUAGE = Number(process.env.SYNC_PAGES_PER_LANGUAGE ?? 3);
+const CONCURRENCY = Number(process.env.SYNC_CONCURRENCY ?? 8);
 
-// Regions to sync watch-provider links for. Kept small on purpose — Section
-// 19 flags this table for a shorter sync TTL since links go stale; more
-// regions later once this proves worth the extra TMDB calls per title.
-const WATCH_REGIONS = ["US", "IN"];
+// A deliberately curated "truly global" spread (Section 01 core value),
+// not just whatever TMDB happens to have the most of. Configurable via env
+// so this can grow without another code change.
+const LANGUAGES = (process.env.SYNC_LANGUAGES ?? "en,hi,ko,ja,fr,es,de,it,zh,tr,pt,ru")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
 
 function normalize(value: number, min: number, max: number): number {
   if (max === min) return 0.5;
   return (value - min) / (max - min);
+}
+
+async function processInChunks<T>(items: T[], size: number, fn: (item: T) => Promise<void>) {
+  for (let i = 0; i < items.length; i += size) {
+    const chunk = items.slice(i, i + size);
+    await Promise.all(chunk.map(fn));
+  }
 }
 
 async function upsertTitle(m: TmdbMovie): Promise<string> {
@@ -67,12 +83,9 @@ async function upsertTitle(m: TmdbMovie): Promise<string> {
 async function syncWatchProvidersForTitle(titleId: string, tmdbId: number) {
   try {
     const { results } = await tmdb.watchProviders(tmdbId);
-
-    // Idempotent: clear this title's existing provider rows before re-inserting,
-    // so a rerun never duplicates rows (Section 22 standard).
     await prisma.watchProvider.deleteMany({ where: { titleId } });
 
-    for (const region of WATCH_REGIONS) {
+    for (const region of ["US", "IN"]) {
       const regionData = results[region];
       if (!regionData) continue;
 
@@ -85,41 +98,74 @@ async function syncWatchProvidersForTitle(titleId: string, tmdbId: number) {
       for (const { list, type } of categories) {
         for (const provider of list ?? []) {
           await prisma.watchProvider.create({
-            data: {
-              titleId,
-              providerName: provider.provider_name,
-              region,
-              link: regionData.link,
-              type,
-            },
+            data: { titleId, providerName: provider.provider_name, region, link: regionData.link, type },
           });
         }
       }
     }
   } catch {
-    // Non-fatal — a title without watch-provider data just shows no links, not a broken sync.
+    // Non-fatal — a title without watch-provider data just shows no links.
   }
 }
 
 export async function syncTitles() {
-  let upserted = 0;
-  const batch: TmdbMovie[] = [];
+  const byId = new Map<number, TmdbMovie>();
 
-  for (let page = 1; page <= PAGES_PER_RUN; page++) {
+  // Global trending pass — catches whatever's broadly popular right now,
+  // regardless of language.
+  for (let page = 1; page <= PAGES_GLOBAL; page++) {
     const { results } = await tmdb.discoverMovies(page);
-    batch.push(...results);
+    for (const m of results) byId.set(m.id, m);
   }
 
-  const popularities = batch.map((m) => m.popularity);
-  const minPop = Math.min(...popularities);
-  const maxPop = Math.max(...popularities);
+  // Per-language passes — guarantees every configured industry actually
+  // gets synced, rather than only whatever floats to the top of a single
+  // global popularity sort (which skews English-language by default).
+  for (const lang of LANGUAGES) {
+    for (let page = 1; page <= PAGES_PER_LANGUAGE; page++) {
+      try {
+        const { results } = await tmdb.discoverMovies(page, lang);
+        for (const m of results) byId.set(m.id, m);
+      } catch (err) {
+        console.error(`Skipping language=${lang} page=${page}:`, err);
+      }
+    }
+  }
 
+  const batch = Array.from(byId.values());
+
+  // Region-relative normalization: group by each title's own
+  // original_language, compute min/max popularity within that group only.
+  const groups = new Map<string, TmdbMovie[]>();
   for (const m of batch) {
+    const key = m.original_language || "unknown";
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key)!.push(m);
+  }
+
+  const popNormByTmdbId = new Map<number, number>();
+  for (const group of groups.values()) {
+    const pops = group.map((m) => m.popularity);
+    const min = Math.min(...pops);
+    const max = Math.max(...pops);
+    for (const m of group) {
+      popNormByTmdbId.set(m.id, normalize(m.popularity, min, max));
+    }
+  }
+
+  let upserted = 0;
+
+  await processInChunks(batch, CONCURRENCY, async (m) => {
+    // Basic sanity filter, not yet the full per-region quality floor FR-6
+    // describes — that needs a proper vote-count distribution per
+    // language, still a TODO. This just drops near-zero-engagement noise.
+    if (m.vote_count < 5) return;
+
     const titleId = await upsertTitle(m);
     await syncWatchProvidersForTitle(titleId, m.id);
 
     const base = computeBaseScore({
-      popularityNorm: normalize(m.popularity, minPop, maxPop),
+      popularityNorm: popNormByTmdbId.get(m.id) ?? 0.5,
       ratingNorm: m.vote_average / 10,
       criticNorm: null,
       recencyTrendNorm: 0.5, // TODO: derive from popularity delta across syncs
@@ -132,22 +178,19 @@ export async function syncTitles() {
     await prisma.recommendationScore.upsert({
       where: { titleId_region: { titleId, region: "GLOBAL" } },
       update: { computedScore: base.score, componentsJson: base.components },
-      create: {
-        titleId,
-        region: "GLOBAL",
-        computedScore: base.score,
-        componentsJson: base.components,
-      },
+      create: { titleId, region: "GLOBAL", computedScore: base.score, componentsJson: base.components },
     });
 
     upserted++;
-  }
+  });
 
   await prisma.syncLog.create({
     data: { source: "tmdb", titlesUpserted: upserted, status: "success" },
   });
 
-  console.log(`Synced ${upserted} titles across ${PAGES_PER_RUN} pages`);
+  console.log(
+    `Synced ${upserted} titles across ${groups.size} languages (${batch.length} candidates fetched)`
+  );
 }
 
 if (require.main === module) {

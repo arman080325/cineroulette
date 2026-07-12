@@ -11,6 +11,7 @@
   "dependencies": {
     "@cineroulette/db": "*",
     "@cineroulette/scoring": "*",
+    "@upstash/redis": "^1.34.3",
     "next": "^14.2.5",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
