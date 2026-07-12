@@ -123,14 +123,15 @@ export default function HomePage() {
               <button
                 key={m.label}
                 onClick={() => setMood(mood === m.label ? null : m.label)}
-                className={`px-4 py-2 rounded-pill text-sm font-body border transition-all flex items-center gap-1.5 ${
-                  mood === m.label
-                    ? "bg-marquee border-marquee shadow-glow"
-                    : "border-neutral-700 hover:border-gold/60 hover:text-gold"
-                }`}
+                aria-pressed={mood === m.label}
+                className={`px-4 py-2 rounded-pill text-sm font-body border transition-all flex items-center gap-1.5 focus-visible:ring-2 focus-visible:ring-gold focus-visible:outline-none ${mood === m.label
+                  ? "bg-marquee border-marquee shadow-glow"
+                  : "border-neutral-700 hover:border-gold/60 hover:text-gold"
+                  }`}
               >
-                <span>{m.icon}</span>
+                <span aria-hidden="true">{m.icon}</span>
                 {m.label}
+                {mood === m.label && <span className="sr-only">, selected</span>}
               </button>
             ))}
           </div>
@@ -152,7 +153,8 @@ export default function HomePage() {
             <select
               value={selectedGenre ?? ""}
               onChange={(e) => setSelectedGenre(e.target.value || null)}
-              className="bg-neutral-900 border border-neutral-700 rounded-pill px-4 py-2 text-neutral-300 focus:border-gold outline-none"
+              aria-label="Filter by genre"
+              className="bg-neutral-900 border border-neutral-700 rounded-pill px-4 py-2 text-neutral-300 focus:border-gold focus-visible:ring-2 focus-visible:ring-gold outline-none"
             >
               <option value="">Any genre</option>
               {genres.map((g) => (
@@ -165,7 +167,8 @@ export default function HomePage() {
             <select
               value={selectedLanguage}
               onChange={(e) => setSelectedLanguage(e.target.value)}
-              className="bg-neutral-900 border border-neutral-700 rounded-pill px-4 py-2 text-neutral-300 focus:border-gold outline-none"
+              aria-label="Filter by language"
+              className="bg-neutral-900 border border-neutral-700 rounded-pill px-4 py-2 text-neutral-300 focus:border-gold focus-visible:ring-2 focus-visible:ring-gold outline-none"
             >
               <option value="">Any language</option>
               {languages.map((l) => (
@@ -178,7 +181,8 @@ export default function HomePage() {
 
           <button
             onClick={spin}
-            className="relative px-10 py-5 rounded-2xl bg-marquee font-display text-2xl tracking-wide shadow-glow hover:brightness-110 active:scale-95 transition-all"
+            aria-label="Spin the roulette to get a movie recommendation"
+            className="relative px-10 py-5 rounded-2xl bg-marquee font-display text-2xl tracking-wide shadow-glow hover:brightness-110 active:scale-95 transition-all focus-visible:ring-4 focus-visible:ring-gold focus-visible:outline-none"
           >
             🎬 Spin the Roulette
           </button>
@@ -188,8 +192,12 @@ export default function HomePage() {
       )}
 
       {stage === "revving" && (
-        <div className="relative z-10 flex flex-col items-center gap-3 text-neutral-400 mt-8">
-          <div className="h-10 w-10 rounded-full border-2 border-gold border-t-transparent animate-spin" />
+        <div
+          role="status"
+          aria-live="polite"
+          className="relative z-10 flex flex-col items-center gap-3 text-neutral-400 mt-8"
+        >
+          <div className="h-10 w-10 rounded-full border-2 border-gold border-t-transparent animate-spin" aria-hidden="true" />
           <span className="text-sm tracking-wide font-body">revving up the reel...</span>
         </div>
       )}
@@ -204,6 +212,8 @@ export default function HomePage() {
 
           {stage === "revealed" && (
             <div
+              role="status"
+              aria-live="polite"
               className="max-w-[300px] w-full text-center mt-0 animate-[fadeUp_0.4s_ease-out]"
               style={{ ["--ticket-bg" as string]: "#0a0605" }}
             >
@@ -240,13 +250,14 @@ export default function HomePage() {
                       .map((name) => {
                         const provider = result.watchProviders!.find((w) => w.name === name)!;
                         return (
-                        <a
+                          <a
                             key={name}
                             href={provider.link}
                             target="_blank"
                             rel="noopener noreferrer"
                             onClick={() => trackWatchClick(name)}
-                            className="px-2.5 py-1 rounded-pill border border-neutral-700 text-neutral-300 hover:border-gold/60 hover:text-gold transition"
+                            aria-label={`Watch on ${name}, opens in new tab`}
+                            className="px-2.5 py-1 rounded-pill border border-neutral-700 text-neutral-300 hover:border-gold/60 hover:text-gold transition focus-visible:ring-2 focus-visible:ring-gold focus-visible:outline-none"
                           >
                             ▶ {name}
                           </a>
@@ -260,29 +271,29 @@ export default function HomePage() {
                 <div className="flex flex-wrap justify-center gap-3 mt-6 font-body">
                   <button
                     onClick={spin}
-                    className="px-5 py-2.5 rounded-2xl bg-marquee font-medium hover:brightness-110 active:scale-95 transition shadow-glow"
+                    className="px-5 py-2.5 rounded-2xl bg-marquee font-medium hover:brightness-110 active:scale-95 transition shadow-glow focus-visible:ring-2 focus-visible:ring-gold focus-visible:outline-none"
                   >
                     🔁 Spin Again
                   </button>
                   <button
                     onClick={() => sendInteraction("SAVED")}
                     disabled={interaction === "saved"}
-                    className={`px-5 py-2.5 rounded-2xl border transition ${
-                      interaction === "saved"
-                        ? "border-gold text-gold"
-                        : "border-neutral-700 hover:border-gold/60 hover:text-gold"
-                    }`}
+                    aria-pressed={interaction === "saved"}
+                    className={`px-5 py-2.5 rounded-2xl border transition focus-visible:ring-2 focus-visible:ring-gold focus-visible:outline-none ${interaction === "saved"
+                      ? "border-gold text-gold"
+                      : "border-neutral-700 hover:border-gold/60 hover:text-gold"
+                      }`}
                   >
                     {interaction === "saved" ? "✓ Saved" : "❤️ Save"}
                   </button>
                   <button
                     onClick={() => sendInteraction("NOT_INTERESTED")}
                     disabled={interaction === "not-interested"}
-                    className={`px-5 py-2.5 rounded-2xl border transition ${
-                      interaction === "not-interested"
-                        ? "border-neutral-600 text-neutral-600"
-                        : "border-neutral-700 hover:border-neutral-500 text-neutral-400"
-                    }`}
+                    aria-pressed={interaction === "not-interested"}
+                    className={`px-5 py-2.5 rounded-2xl border transition focus-visible:ring-2 focus-visible:ring-gold focus-visible:outline-none ${interaction === "not-interested"
+                      ? "border-neutral-600 text-neutral-600"
+                      : "border-neutral-700 hover:border-neutral-500 text-neutral-400"
+                      }`}
                   >
                     {interaction === "not-interested" ? "Noted" : "✋ Not Interested"}
                   </button>
@@ -290,7 +301,8 @@ export default function HomePage() {
                     href={`/title/${result.id}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="px-5 py-2.5 rounded-2xl border border-neutral-700 hover:border-gold/60 hover:text-gold transition font-body"
+                    aria-label={`Share permalink for ${result.title}, opens in new tab`}
+                    className="px-5 py-2.5 rounded-2xl border border-neutral-700 hover:border-gold/60 hover:text-gold transition font-body focus-visible:ring-2 focus-visible:ring-gold focus-visible:outline-none"
                   >
                     🔗 Share
                   </a>
