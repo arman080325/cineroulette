@@ -7,6 +7,7 @@ import { computeMoodWeights } from "../lib/mood-mapping";
 
 const PAGES_GLOBAL = Number(process.env.SYNC_PAGES_PER_RUN ?? 5);
 const PAGES_PER_LANGUAGE = Number(process.env.SYNC_PAGES_PER_LANGUAGE ?? 3);
+const PAGES_POPULAR = Number(process.env.SYNC_PAGES_POPULAR ?? 5);
 const CONCURRENCY = Number(process.env.SYNC_CONCURRENCY ?? 8);
 const OMDB_ENABLED = process.env.OMDB_API_KEY ? true : false;
 const OMDB_MAX_LOOKUPS_PER_RUN = Number(process.env.OMDB_MAX_LOOKUPS_PER_RUN ?? 300);
@@ -172,10 +173,22 @@ async function fetchCriticScore(tmdbId: number): Promise<number | null> {
 }
 
 export async function syncTitles() {
-  const byId = new Map<number, TmdbMovie>();
+const byId = new Map<number, TmdbMovie>();
 
   for (let page = 1; page <= PAGES_GLOBAL; page++) {
     const { results } = await tmdb.discoverMovies(page);
+    for (const m of results) byId.set(m.id, m);
+  }
+
+  // TMDB's own "popular" and "trending" lists — different ranking than
+  // /discover, and the closest proxy to "titles a search user will
+  // actually type." Fixes the "well-known movie missing from search" gap.
+  for (let page = 1; page <= PAGES_POPULAR; page++) {
+    const { results } = await tmdb.popularMovies(page);
+    for (const m of results) byId.set(m.id, m);
+  }
+  {
+    const { results } = await tmdb.trendingMovies();
     for (const m of results) byId.set(m.id, m);
   }
 

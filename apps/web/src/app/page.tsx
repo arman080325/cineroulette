@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { SpinReel, SpinReelResult } from "@/components/SpinReel";
+import { SearchBar } from "@/components/SearchBar";
 import { getSessionId } from "@/lib/session";
 import { track } from "@/lib/analytics-client";
 
@@ -109,11 +110,15 @@ export default function HomePage() {
     <main className="relative min-h-screen text-white flex flex-col items-center px-4 py-16 overflow-hidden">
       <div className="hero-spotlight" />
 
-      <div className="relative z-10 text-center mb-10">
+      <div className="relative z-10 text-center mb-6">
         <h1 className="font-display text-7xl sm:text-8xl tracking-wide text-gold drop-shadow-[0_0_18px_rgba(255,211,106,0.25)]">
           CineRoulette
         </h1>
         <p className="text-neutral-400 mt-1 font-body tracking-wide">Stop Searching. Start Watching.</p>
+      </div>
+
+      <div className="relative z-30 w-full mb-10">
+        <SearchBar />
       </div>
 
       {stage === "idle" && (

@@ -61,12 +61,24 @@ export const tmdb = {
   languages: () =>
     tmdbGet<{ iso_639_1: string; english_name: string; name: string }[]>("/configuration/languages"),
 
-  discoverMovies: (page: number, language?: string) =>
+discoverMovies: (page: number, language?: string) =>
     tmdbGet<{ results: TmdbMovie[]; total_pages: number }>("/discover/movie", {
       page: String(page),
       sort_by: "popularity.desc",
       ...(language ? { with_original_language: language } : {}),
     }),
+
+  // Different ranking signal than /discover — this is TMDB's own curated
+  // "popular right now" list, which is what search users actually expect
+  // to find (a well-known title like "The Conjuring" may not surface in
+  // a per-language discover sample, but reliably shows up here).
+  popularMovies: (page: number) =>
+    tmdbGet<{ results: TmdbMovie[]; total_pages: number }>("/movie/popular", {
+      page: String(page),
+    }),
+
+  trendingMovies: () =>
+    tmdbGet<{ results: TmdbMovie[] }>("/trending/movie/week"),
 
   movieDetails: (id: number) =>
     tmdbGet<TmdbMovie & { runtime: number }>(`/movie/${id}`),
