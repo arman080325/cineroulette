@@ -48,8 +48,7 @@ export default function HomePage() {
   }, []);
 
   async function spin() {
-    track("spin_started", { genre: selectedGenre, language: selectedLanguage || null, minRating });
-
+    track("spin_started", { genre: selectedGenre, language: selectedLanguage || null, mood, minRating });
     setStage("revving");
     setMessage(null);
     setExplanation("");
@@ -65,6 +64,7 @@ export default function HomePage() {
           sessionId: sessionId || undefined,
           genre: selectedGenre ? [selectedGenre] : undefined,
           language: selectedLanguage || undefined,
+          mood: mood || undefined,
         }),
       });
       const data: { title: SpinReelResult | null; scoreExplanation?: string; message?: string } =

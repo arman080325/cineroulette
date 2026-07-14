@@ -75,4 +75,6 @@ export const tmdb = {
     tmdbGet<{ results: Record<string, TmdbWatchProviderRegion> }>(`/movie/${id}/watch/providers`),
 
   externalIds: (id: number) => tmdbGet<{ imdb_id: string | null }>(`/movie/${id}/external_ids`),
+
+  keywords: (id: number) => tmdbGet<{ keywords: { id: number; name: string }[] }>(`/movie/${id}/keywords`),
 };

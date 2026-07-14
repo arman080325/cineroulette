@@ -8,6 +8,7 @@ interface SpinRequestBody {
   type?: "MOVIE" | "TV_SERIES" | "MINI_SERIES" | "ANIME" | "DOCUMENTARY" | "SHORT_FILM";
   genre?: string[];
   language?: string;
+  mood?: string;
   minRating?: number;
   exclude?: string[];
   sessionId?: string;
@@ -17,6 +18,7 @@ interface SpinRequestBody {
 interface CandidateForPick {
   score: number;
   componentsJson: unknown;
+  moodWeight: number;
   title: {
     id: string;
     title: string;
@@ -27,6 +29,7 @@ interface CandidateForPick {
     genres: { genre: { name: string } }[];
     ratings: { voteAverage: number | null }[];
     watchProviders: { providerName: string; type: string; link: string }[];
+    moods: { moodTag: string; weight: number }[];
   };
 }
 
@@ -38,6 +41,7 @@ function buildComboKey(body: SpinRequestBody, region: string): string {
     type: body.type ?? null,
     genre: body.genre?.slice().sort() ?? null,
     language: body.language ?? null,
+    mood: body.mood ?? null,
     minRating: body.minRating ?? null,
   });
 }
@@ -58,6 +62,9 @@ export async function POST(req: NextRequest) {
           genres: body.genre?.length ? { some: { genre: { name: { in: body.genre } } } } : undefined,
           languages: body.language ? { some: { languageCode: body.language } } : undefined,
           ratings: body.minRating ? { some: { voteAverage: { gte: body.minRating } } } : undefined,
+          // Hard filter: only titles with SOME weight for the selected mood
+          // are eligible at all. The exact weight then boosts ranking below.
+          moods: body.mood ? { some: { moodTag: body.mood } } : undefined,
         },
       },
       orderBy: { computedScore: "desc" },
@@ -68,26 +75,32 @@ export async function POST(req: NextRequest) {
             genres: { include: { genre: true } },
             ratings: { orderBy: { updatedAt: "desc" }, take: 1 },
             watchProviders: { where: { region: "US" } },
+            moods: true,
           },
         },
       },
     });
 
-    candidates = rows.map((r) => ({
-      score: r.computedScore,
-      componentsJson: r.componentsJson,
-      title: {
-        id: r.title.id,
-        title: r.title.title,
-        releaseYear: r.title.releaseYear,
-        runtimeMinutes: r.title.runtimeMinutes,
-        overview: r.title.overview,
-        posterPath: r.title.posterPath,
-        genres: r.title.genres,
-        ratings: r.title.ratings,
-        watchProviders: r.title.watchProviders,
-      },
-    }));
+    candidates = rows.map((r) => {
+      const moodWeight = body.mood ? (r.title.moods.find((m) => m.moodTag === body.mood)?.weight ?? 0) : 0;
+      return {
+        score: r.computedScore,
+        componentsJson: r.componentsJson,
+        moodWeight,
+        title: {
+          id: r.title.id,
+          title: r.title.title,
+          releaseYear: r.title.releaseYear,
+          runtimeMinutes: r.title.runtimeMinutes,
+          overview: r.title.overview,
+          posterPath: r.title.posterPath,
+          genres: r.title.genres,
+          ratings: r.title.ratings,
+          watchProviders: r.title.watchProviders,
+          moods: r.title.moods,
+        },
+      };
+    });
 
     await setCachedCandidates(comboKey, candidates);
   }
@@ -100,6 +113,7 @@ export async function POST(req: NextRequest) {
     await trackServerEvent(body.sessionId ?? "anonymous", "spin_empty_result", {
       genre: body.genre ?? null,
       language: body.language ?? null,
+      mood: body.mood ?? null,
       minRating: body.minRating ?? null,
     });
     return NextResponse.json(
@@ -108,7 +122,13 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const picked = weightedRandomPick(pool.map((c) => ({ score: c.score, ref: c }))).ref;
+  // Mood match boosts ranking (Section 07 score component), rather than
+  // just being a pass/fail filter — a title with weight 0.9 for the
+  // selected mood should be meaningfully more likely to be picked than
+  // one that barely cleared the threshold at 0.3.
+  const picked = weightedRandomPick(
+    pool.map((c) => ({ score: c.score * (1 + c.moodWeight), ref: c }))
+  ).ref;
   const latestRating = picked.title.ratings[0];
 
   if (body.sessionId) {
@@ -122,9 +142,18 @@ export async function POST(req: NextRequest) {
     titleId: picked.title.id,
     genre: body.genre ?? null,
     language: body.language ?? null,
+    mood: body.mood ?? null,
     minRating: body.minRating ?? null,
     candidatePoolSize: pool.length,
   });
+
+  const components = picked.componentsJson as Record<string, number>;
+  const explanation =
+    body.mood && picked.moodWeight > 0
+      ? `Picked for strong mood match and ${
+          Object.entries(components).sort((a, b) => b[1] - a[1])[0]?.[0] ?? "overall quality"
+        }.`
+      : explainScore(components);
 
   return NextResponse.json({
     title: {
@@ -142,6 +171,6 @@ export async function POST(req: NextRequest) {
         link: w.link,
       })),
     },
-    scoreExplanation: explainScore(picked.componentsJson as Record<string, number>),
+    scoreExplanation: explanation,
   });
 }

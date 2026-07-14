@@ -3,22 +3,7 @@ import { prisma, TitleType } from "@cineroulette/db";
 import { computeBaseScore } from "@cineroulette/scoring";
 import { tmdb, TmdbMovie } from "../clients/tmdb";
 import { getCriticScore } from "../clients/omdb";
-
-/**
- * Build order Step 4 (bulk import) + Step 5 (score computation), combined
- * into one idempotent job per Section 22 engineering standards.
- *
- * This pass adds:
- * - OMDb critic scores (Section 14 supplemental source), capped per run
- *   to respect OMDb's free-tier 1,000 req/day quota.
- * - FR-6: a region-relative quality floor. Computed as the 10th
- *   percentile of voteAverage WITHIN each original_language group, not a
- *   single global number — Section 07 is explicit that a global threshold
- *   would bury smaller-catalog industries under Hollywood's volume.
- *   Titles below their own group's floor have their RecommendationScore
- *   row explicitly deleted, so a title that regresses on a later sync
- *   stops being selectable rather than lingering with a stale score.
- */
+import { computeMoodWeights } from "../lib/mood-mapping";
 
 const PAGES_GLOBAL = Number(process.env.SYNC_PAGES_PER_RUN ?? 5);
 const PAGES_PER_LANGUAGE = Number(process.env.SYNC_PAGES_PER_LANGUAGE ?? 3);
@@ -124,6 +109,27 @@ async function linkLanguage(titleId: string, languageCode: string | undefined) {
   });
 }
 
+/** Section 28 mood tagging: genre + TMDB keyword heuristic (see mood-mapping.ts). */
+async function linkMoods(titleId: string, tmdbId: number, genreNames: string[]) {
+  try {
+    const { keywords } = await tmdb.keywords(tmdbId);
+    const weights = computeMoodWeights(
+      genreNames,
+      keywords.map((k) => k.name)
+    );
+
+    // Delete-then-recreate, same idempotent pattern as watch providers —
+    // a title's mood weights can shift on resync (new keywords, genre
+    // corrections), so stale rows shouldn't linger.
+    await prisma.titleMood.deleteMany({ where: { titleId } });
+    for (const { mood, weight } of weights) {
+      await prisma.titleMood.create({ data: { titleId, moodTag: mood, weight } });
+    }
+  } catch {
+    // Non-fatal — a title with no mood tags just won't surface under mood filters.
+  }
+}
+
 async function syncWatchProvidersForTitle(titleId: string, tmdbId: number) {
   try {
     const { results } = await tmdb.watchProviders(tmdbId);
@@ -152,7 +158,6 @@ async function syncWatchProvidersForTitle(titleId: string, tmdbId: number) {
   }
 }
 
-/** Fetches a critic score via TMDB external_ids -> OMDb, respecting the per-run cap. */
 async function fetchCriticScore(tmdbId: number): Promise<number | null> {
   if (!OMDB_ENABLED || omdbLookupsUsed >= OMDB_MAX_LOOKUPS_PER_RUN) return null;
   omdbLookupsUsed++;
@@ -187,9 +192,6 @@ export async function syncTitles() {
 
   const batch = Array.from(byId.values()).filter((m) => m.vote_count >= 5);
 
-  // Group by original language for both popularity normalization AND the
-  // FR-6 quality floor — both need to be computed relative to each
-  // language's own distribution, never a single global number.
   const groups = new Map<string, TmdbMovie[]>();
   for (const m of batch) {
     const key = m.original_language || "unknown";
@@ -213,6 +215,12 @@ export async function syncTitles() {
   }
 
   const genreIdMap = await buildGenreIdToOurIdMap();
+  const tmdbGenreIdToName = new Map<number, string>();
+  {
+    const { genres: tmdbGenres } = await tmdb.genres("movie");
+    for (const g of tmdbGenres) tmdbGenreIdToName.set(g.id, g.name);
+  }
+
   let upserted = 0;
   let excludedByFloor = 0;
 
@@ -225,10 +233,11 @@ export async function syncTitles() {
     await linkLanguage(titleId, m.original_language);
     await syncWatchProvidersForTitle(titleId, m.id);
 
-    // FR-6: below this title's own language-group floor -> not selectable.
-    // Title/Rating rows still get written above (so it exists in the
-    // catalog for future re-evaluation), but no RecommendationScore means
-    // /spin's query can never surface it.
+    const genreNames = (m.genre_ids ?? [])
+      .map((id) => tmdbGenreIdToName.get(id))
+      .filter((n): n is string => Boolean(n));
+    await linkMoods(titleId, m.id, genreNames);
+
     if (m.vote_average < floor) {
       excludedByFloor++;
       await prisma.recommendationScore.deleteMany({ where: { titleId, region: "GLOBAL" } });
