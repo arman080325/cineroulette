@@ -78,9 +78,13 @@ export function SearchBar() {
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
       setActiveIndex((i) => Math.max(i - 1, 0));
-    } else if (e.key === "Enter" && activeIndex >= 0) {
+} else if (e.key === "Enter" && activeIndex >= 0) {
       e.preventDefault();
-      selectResult(results[activeIndex]);
+      // Safe: activeIndex is only ever set via Math.min/Math.max against
+      // results.length in the arrow-key handlers above, so it's always
+      // in bounds here — the assertion tells TS what's already guaranteed.
+      const selected = results[activeIndex];
+      if (selected) selectResult(selected);
     } else if (e.key === "Escape") {
       setOpen(false);
     }
