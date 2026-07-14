@@ -14,7 +14,8 @@
     "db:migrate": "dotenv -e .env -- npm run migrate -w packages/db",
     "lint": "npm run lint --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
-    "test": "npm run test --workspaces --if-present"
+    "test": "npm run test --workspaces --if-present",
+    "db:studio": "dotenv -e .env -- npm run studio -w packages/db"
   },
   "devDependencies": {
     "@types/node": "^20.14.0",
