@@ -1,8 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { motion } from "framer-motion";
 import { SpinReel, SpinReelResult } from "@/components/SpinReel";
 import { SearchBar } from "@/components/SearchBar";
+import { PosterWallBackground } from "@/components/PosterWallBackground";
+import { SpinningReelBadge } from "@/components/SpinningReelBadge";
+import { ParticleField } from "@/components/ParticleField";
 import { getSessionId } from "@/lib/session";
 import { track } from "@/lib/analytics-client";
 
@@ -18,6 +22,16 @@ const MOODS = [
   { label: "heartwarming", icon: "🔥" },
   { label: "dark", icon: "🌑" },
 ];
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  show: { opacity: 1, transition: { staggerChildren: 0.08 } },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 12 },
+  show: { opacity: 1, y: 0 },
+};
 
 type Stage = "idle" | "revving" | "spinning" | "revealed";
 type InteractionState = "idle" | "saved" | "not-interested";
@@ -50,6 +64,7 @@ export default function HomePage() {
 
   async function spin() {
     track("spin_started", { genre: selectedGenre, language: selectedLanguage || null, mood, minRating });
+
     setStage("revving");
     setMessage(null);
     setExplanation("");
@@ -106,42 +121,65 @@ export default function HomePage() {
     track("watch_provider_clicked", { titleId: result?.id, provider: providerName });
   }
 
+  const ratingFillPercent = (minRating / 9) * 100;
+
   return (
     <main className="relative min-h-screen text-white flex flex-col items-center px-4 py-16 overflow-hidden">
+      <PosterWallBackground />
       <div className="hero-spotlight" />
+      <ParticleField />
 
-      <div className="relative z-10 text-center mb-6">
-        <h1 className="font-display text-7xl sm:text-8xl tracking-wide text-gold drop-shadow-[0_0_18px_rgba(255,211,106,0.25)]">
-          CineRoulette
-        </h1>
-        <p className="text-neutral-400 mt-1 font-body tracking-wide">Stop Searching. Start Watching.</p>
-      </div>
+      <motion.div
+        initial={{ opacity: 0, y: -16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6 }}
+        className="relative z-10 flex items-center justify-center gap-4 sm:gap-6 mb-6"
+      >
+        <span className="hidden sm:block">
+          <SpinningReelBadge />
+        </span>
+        <div className="text-center">
+          <h1 className="font-display text-6xl sm:text-8xl tracking-wide text-gold drop-shadow-[0_0_18px_rgba(255,211,106,0.25)]">
+            CineRoulette
+          </h1>
+          <p className="text-neutral-400 mt-1 font-body tracking-wide">Stop Searching. Start Watching.</p>
+        </div>
+        <span className="hidden sm:block">
+          <SpinningReelBadge />
+        </span>
+      </motion.div>
 
       <div className="relative z-30 w-full mb-10">
         <SearchBar />
       </div>
 
       {stage === "idle" && (
-        <div className="relative z-10 flex flex-col items-center gap-8 w-full">
-          <div className="flex flex-wrap gap-2.5 justify-center max-w-xl">
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          animate="show"
+          className="relative z-10 flex flex-col items-center gap-8 w-full"
+        >
+          <motion.div variants={itemVariants} className="flex flex-wrap gap-2.5 justify-center max-w-xl">
             {MOODS.map((m) => (
               <button
                 key={m.label}
                 onClick={() => setMood(mood === m.label ? null : m.label)}
                 aria-pressed={mood === m.label}
-                className={`px-4 py-2 rounded-pill text-sm font-body border transition-all flex items-center gap-1.5 focus-visible:ring-2 focus-visible:ring-gold focus-visible:outline-none ${mood === m.label
-                  ? "bg-marquee border-marquee shadow-glow"
-                  : "border-neutral-700 hover:border-gold/60 hover:text-gold"
-                  }`}
+                className={`px-4 py-2 rounded-pill text-sm font-body border transition-all duration-200 flex items-center gap-1.5 hover:-translate-y-0.5 active:scale-95 focus-visible:ring-2 focus-visible:ring-gold focus-visible:outline-none ${
+                  mood === m.label
+                    ? "bg-marquee border-marquee shadow-glow"
+                    : "border-neutral-700 hover:border-gold/60 hover:text-gold hover:shadow-goldglow"
+                }`}
               >
                 <span aria-hidden="true">{m.icon}</span>
                 {m.label}
                 {mood === m.label && <span className="sr-only">, selected</span>}
               </button>
             ))}
-          </div>
+          </motion.div>
 
-          <div className="flex items-center gap-3 font-body">
+          <motion.div variants={itemVariants} className="flex items-center gap-3 font-body">
             <label className="text-sm text-neutral-400">Min rating</label>
             <input
               type="range"
@@ -149,17 +187,21 @@ export default function HomePage() {
               max={9}
               value={minRating}
               onChange={(e) => setMinRating(Number(e.target.value))}
-              className="accent-marquee"
+              className="styled-range w-40"
+              style={{ ["--range-fill" as string]: `${ratingFillPercent}%` }}
             />
             <span className="w-10 text-sm text-gold">{minRating || "Any"}</span>
-          </div>
+          </motion.div>
 
-          <div className="flex flex-wrap items-center justify-center gap-3 font-body text-sm">
+          <motion.div
+            variants={itemVariants}
+            className="flex flex-wrap items-center justify-center gap-3 font-body text-sm"
+          >
             <select
               value={selectedGenre ?? ""}
               onChange={(e) => setSelectedGenre(e.target.value || null)}
               aria-label="Filter by genre"
-              className="bg-neutral-900 border border-neutral-700 rounded-pill px-4 py-2 text-neutral-300 focus:border-gold focus-visible:ring-2 focus-visible:ring-gold outline-none"
+              className="bg-neutral-900/80 backdrop-blur border border-neutral-700 rounded-pill px-4 py-2 text-neutral-300 focus:border-gold focus-visible:ring-2 focus-visible:ring-gold outline-none transition hover:border-gold/40"
             >
               <option value="">Any genre</option>
               {genres.map((g) => (
@@ -173,7 +215,7 @@ export default function HomePage() {
               value={selectedLanguage}
               onChange={(e) => setSelectedLanguage(e.target.value)}
               aria-label="Filter by language"
-              className="bg-neutral-900 border border-neutral-700 rounded-pill px-4 py-2 text-neutral-300 focus:border-gold focus-visible:ring-2 focus-visible:ring-gold outline-none"
+              className="bg-neutral-900/80 backdrop-blur border border-neutral-700 rounded-pill px-4 py-2 text-neutral-300 focus:border-gold focus-visible:ring-2 focus-visible:ring-gold outline-none transition hover:border-gold/40"
             >
               <option value="">Any language</option>
               {languages.map((l) => (
@@ -182,18 +224,28 @@ export default function HomePage() {
                 </option>
               ))}
             </select>
-          </div>
+          </motion.div>
 
-          <button
-            onClick={spin}
-            aria-label="Spin the roulette to get a movie recommendation"
-            className="relative px-10 py-5 rounded-2xl bg-marquee font-display text-2xl tracking-wide shadow-glow hover:brightness-110 active:scale-95 transition-all focus-visible:ring-4 focus-visible:ring-gold focus-visible:outline-none"
-          >
-            🎬 Spin the Roulette
-          </button>
+          <motion.div variants={itemVariants} className="relative">
+            <div
+              className="absolute -inset-3 rounded-2xl border-2 border-dashed border-gold/40 animate-spin-slow pointer-events-none"
+              aria-hidden="true"
+            />
+            <button
+              onClick={spin}
+              aria-label="Spin the roulette to get a movie recommendation"
+              className="relative px-10 py-5 rounded-2xl bg-marquee font-display text-2xl tracking-wide animate-pulse-glow hover:brightness-110 active:scale-95 transition-all focus-visible:ring-4 focus-visible:ring-gold focus-visible:outline-none"
+            >
+              🎬 Spin the Roulette
+            </button>
+          </motion.div>
 
-          {message && <p className="text-neutral-400 text-sm font-body">{message}</p>}
-        </div>
+          {message && (
+            <motion.p variants={itemVariants} className="text-neutral-400 text-sm font-body">
+              {message}
+            </motion.p>
+          )}
+        </motion.div>
       )}
 
       {stage === "revving" && (
@@ -284,10 +336,11 @@ export default function HomePage() {
                     onClick={() => sendInteraction("SAVED")}
                     disabled={interaction === "saved"}
                     aria-pressed={interaction === "saved"}
-                    className={`px-5 py-2.5 rounded-2xl border transition focus-visible:ring-2 focus-visible:ring-gold focus-visible:outline-none ${interaction === "saved"
-                      ? "border-gold text-gold"
-                      : "border-neutral-700 hover:border-gold/60 hover:text-gold"
-                      }`}
+                    className={`px-5 py-2.5 rounded-2xl border transition focus-visible:ring-2 focus-visible:ring-gold focus-visible:outline-none ${
+                      interaction === "saved"
+                        ? "border-gold text-gold"
+                        : "border-neutral-700 hover:border-gold/60 hover:text-gold"
+                    }`}
                   >
                     {interaction === "saved" ? "✓ Saved" : "❤️ Save"}
                   </button>
@@ -295,10 +348,11 @@ export default function HomePage() {
                     onClick={() => sendInteraction("NOT_INTERESTED")}
                     disabled={interaction === "not-interested"}
                     aria-pressed={interaction === "not-interested"}
-                    className={`px-5 py-2.5 rounded-2xl border transition focus-visible:ring-2 focus-visible:ring-gold focus-visible:outline-none ${interaction === "not-interested"
-                      ? "border-neutral-600 text-neutral-600"
-                      : "border-neutral-700 hover:border-neutral-500 text-neutral-400"
-                      }`}
+                    className={`px-5 py-2.5 rounded-2xl border transition focus-visible:ring-2 focus-visible:ring-gold focus-visible:outline-none ${
+                      interaction === "not-interested"
+                        ? "border-neutral-600 text-neutral-600"
+                        : "border-neutral-700 hover:border-neutral-500 text-neutral-400"
+                    }`}
                   >
                     {interaction === "not-interested" ? "Noted" : "✋ Not Interested"}
                   </button>
