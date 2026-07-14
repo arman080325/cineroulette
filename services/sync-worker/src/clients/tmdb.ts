@@ -61,7 +61,7 @@ export const tmdb = {
   languages: () =>
     tmdbGet<{ iso_639_1: string; english_name: string; name: string }[]>("/configuration/languages"),
 
-discoverMovies: (page: number, language?: string) =>
+  discoverMovies: (page: number, language?: string) =>
     tmdbGet<{ results: TmdbMovie[]; total_pages: number }>("/discover/movie", {
       page: String(page),
       sort_by: "popularity.desc",
@@ -73,4 +73,6 @@ discoverMovies: (page: number, language?: string) =>
 
   watchProviders: (id: number) =>
     tmdbGet<{ results: Record<string, TmdbWatchProviderRegion> }>(`/movie/${id}/watch/providers`),
+
+  externalIds: (id: number) => tmdbGet<{ imdb_id: string | null }>(`/movie/${id}/external_ids`),
 };

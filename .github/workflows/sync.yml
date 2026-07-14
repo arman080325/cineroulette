@@ -21,6 +21,7 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
+          OMDB_API_KEY: ${{ secrets.OMDB_API_KEY }}
           SYNC_PAGES_PER_RUN: "5"
           SYNC_PAGES_PER_LANGUAGE: "3"
           SYNC_LANGUAGES: "en,hi,ko,ja,fr,es,de,it,zh,tr,pt,ru"
