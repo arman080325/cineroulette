@@ -1,22 +1,20 @@
 import "./globals.css";
 import type { Metadata } from "next";
-import { Bebas_Neue, Inter } from "next/font/google";
+import { Bebas_Neue, Inter, IBM_Plex_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { AnalyticsInit } from "@/components/AnalyticsInit";
+import { AppHeader } from "@/components/AppHeader";
 
-// Bebas Neue reads exactly like physical marquee/poster lettering — the one
-// deliberate typographic risk this design takes. Inter carries body copy so
-// the display face stays special-occasion, not a burden to read paragraphs in.
-const display = Bebas_Neue({
-  weight: "400",
-  subsets: ["latin"],
-  variable: "--font-display",
-});
+const display = Bebas_Neue({ weight: "400", subsets: ["latin"], variable: "--font-display" });
+const body = Inter({ subsets: ["latin"], variable: "--font-body" });
 
-const body = Inter({
+// Ticket stubs are printed in monospace — this grounds the metaphor in a
+// real material detail and gives numeric data its own voice.
+const data = IBM_Plex_Mono({
+  weight: ["400", "500"],
   subsets: ["latin"],
-  variable: "--font-body",
+  variable: "--font-data",
 });
 
 export const metadata: Metadata = {
@@ -32,29 +30,19 @@ export const metadata: Metadata = {
   manifest: "/site.webmanifest",
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${display.variable} ${body.variable}`}>
-      <body>
+    <html lang="en" className={`${display.variable} ${body.variable} ${data.variable}`}>
+      <body className="bg-velvet text-smoke">
         <AnalyticsInit />
-
+        <a href="#stage" className="skip-link">Skip to result</a>
         <div className="grain-overlay" aria-hidden="true" />
-
+        <AppHeader />
         {children}
-
-        {/* TMDB attribution — required */}
-        <footer className="text-center text-xs text-neutral-600 py-6 font-body">
+        <footer className="text-center text-xs text-ash py-6 font-body">
           This product uses the TMDB API but is not endorsed or certified by TMDB.
         </footer>
-
-        {/* Vercel Analytics */}
         <Analytics />
-
-        {/* Vercel Speed Insights */}
         <SpeedInsights />
       </body>
     </html>
