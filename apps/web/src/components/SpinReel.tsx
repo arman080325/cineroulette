@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { MarqueeBorder } from "./MarqueeBorder";
 import { useSpinSound } from "../hooks/useSpinSound";
+import Image from "next/image";
 
 export interface SpinReelResult {
   id: string;
@@ -54,8 +55,14 @@ function PosterCard({ result }: { result: SpinReelResult }) {
   return (
     <div className="h-full w-full rounded-card overflow-hidden border border-brass/30 bg-ink relative shadow-glow">
       {src ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={src} alt={result.title} className="h-full w-full object-cover" />
+        <Image
+          src={src}
+          alt={result.title}
+          fill
+          sizes="(max-width: 640px) 300px, 340px"
+          className="object-cover"
+          priority
+        />
       ) : (
         <div className="h-full w-full flex items-center justify-center bg-gradient-to-br from-marquee/40 to-velvet p-6">
           <span className="font-display text-4xl text-center leading-tight text-smoke">{result.title}</span>

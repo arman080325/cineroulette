@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { track } from "@/lib/analytics-client";
+import Image from "next/image";
 
 interface SearchResult {
   id: string;
@@ -78,7 +79,7 @@ export function SearchBar() {
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
       setActiveIndex((i) => Math.max(i - 1, 0));
-} else if (e.key === "Enter" && activeIndex >= 0) {
+    } else if (e.key === "Enter" && activeIndex >= 0) {
       e.preventDefault();
       // Safe: activeIndex is only ever set via Math.min/Math.max against
       // results.length in the arrow-key handlers above, so it's always
@@ -129,17 +130,17 @@ export function SearchBar() {
               aria-selected={i === activeIndex}
               onMouseDown={() => selectResult(r)}
               onMouseEnter={() => setActiveIndex(i)}
-              className={`flex items-center gap-3 px-3 py-2 cursor-pointer transition ${
-                i === activeIndex ? "bg-marquee/20" : "hover:bg-neutral-800"
-              }`}
+              className={`flex items-center gap-3 px-3 py-2 cursor-pointer transition ${i === activeIndex ? "bg-marquee/20" : "hover:bg-neutral-800"
+                }`}
             >
-              <div className="h-14 w-10 shrink-0 rounded overflow-hidden bg-neutral-800">
+              <div className="relative h-14 w-10 shrink-0 rounded overflow-hidden bg-neutral-800">
                 {r.posterPath ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
+                  <Image
                     src={`https://image.tmdb.org/t/p/w92${r.posterPath}`}
                     alt=""
-                    className="h-full w-full object-cover"
+                    fill
+                    sizes="40px"
+                    className="object-cover"
                   />
                 ) : null}
               </div>

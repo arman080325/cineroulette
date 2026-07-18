@@ -15,7 +15,8 @@
     "lint": "npm run lint --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
-    "db:studio": "dotenv -e .env -- npm run studio -w packages/db"
+    "db:studio": "dotenv -e .env -- npm run studio -w packages/db",
+    "build:web": "dotenv -e .env -- npm run build -w apps/web"
   },
   "devDependencies": {
     "@types/node": "^20.14.0",
