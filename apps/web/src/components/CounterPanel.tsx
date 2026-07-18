@@ -135,7 +135,8 @@ export function CounterPanel(p: CounterProps) {
           </button>
         )}
 
-        <motion.div className="relative self-center lg:self-start" whileTap={{ scale: 0.97 }}>
+{/* Desktop: inline. Mobile: hidden here, rendered in the sticky bar below. */}
+        <motion.div className="relative hidden self-center lg:block lg:self-start" whileTap={{ scale: 0.97 }}>
           <div
             className="pointer-events-none absolute -inset-3 animate-spin-slow rounded-2xl border-2 border-dashed border-gold/40"
             aria-hidden="true"
@@ -149,6 +150,19 @@ export function CounterPanel(p: CounterProps) {
             {p.spinning ? "Spinning…" : "Spin the roulette"}
           </button>
         </motion.div>
+      </div>
+
+      {/* Sticky bottom bar — mobile only. The primary action should never
+          require scrolling past the filters to reach. */}
+      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-brass/30 bg-velvet/95 px-4 py-3 backdrop-blur-md lg:hidden">
+        <button
+          type="button"
+          onClick={p.onSpin}
+          disabled={p.spinning}
+          className="w-full min-h-[56px] rounded-2xl bg-marquee py-4 font-display text-xl tracking-wide text-white transition hover:brightness-110 disabled:opacity-60 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-gold"
+        >
+          {p.spinning ? "Spinning…" : "Spin the roulette"}
+        </button>
       </div>
     </div>
   );

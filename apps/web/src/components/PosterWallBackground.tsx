@@ -14,7 +14,7 @@ export function PosterWallBackground() {
 
   if (posters.length === 0) return null;
 
-  const tiles = Array.from({ length: 32 }, (_, i) => posters[i % posters.length]);
+  const tiles = Array.from({ length: 16 }, (_, i) => posters[i % posters.length]);
 
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none select-none" aria-hidden="true">
@@ -27,8 +27,9 @@ export function PosterWallBackground() {
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={`https://image.tmdb.org/t/p/w185${path}`}
+              src={`https://image.tmdb.org/t/p/w92${path}`}
               alt=""
+              loading="lazy"
               className="h-full w-full object-cover grayscale"
             />
           </div>

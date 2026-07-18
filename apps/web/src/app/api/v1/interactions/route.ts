@@ -53,3 +53,29 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({ ok: true });
 }
+
+/**
+ * DELETE /api/v1/interactions — un-save.
+ * body: { titleId, sessionId }
+ *
+ * Removes SAVED rows rather than writing a NOT_INTERESTED tombstone:
+ * un-saving means "I never meant to bookmark this", which is different from
+ * "I actively don't want this recommended again". Conflating them would
+ * poison the taste signal the score engine reads later.
+ */
+export async function DELETE(req: NextRequest) {
+  const body = (await req.json()) as { titleId?: string; sessionId?: string };
+
+  if (!body.titleId || !body.sessionId) {
+    return NextResponse.json(
+      { error: { code: "BAD_REQUEST", message: "titleId and sessionId are required." } },
+      { status: 400 }
+    );
+  }
+
+  await prisma.userInteraction.deleteMany({
+    where: { titleId: body.titleId, sessionId: body.sessionId, action: "SAVED" },
+  });
+
+  return NextResponse.json({ ok: true });
+}

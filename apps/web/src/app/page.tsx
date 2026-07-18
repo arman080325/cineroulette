@@ -71,6 +71,7 @@ function reducer(state: SpinState, action: Action): SpinState {
 }
 
 const HINT_KEY = "cineroulette_hint_dismissed";
+const RESULT_HINT_KEY = "cineroulette_result_hint_dismissed";
 
 export default function HomePage() {
   const [state, dispatch] = useReducer(reducer, initialState);
@@ -84,6 +85,7 @@ export default function HomePage() {
   const [selectedLanguage, setSelectedLanguage] = useState("");
   const [loadingRefs, setLoadingRefs] = useState(true);
   const [showHint, setShowHint] = useState(false);
+  const [showResultHint, setShowResultHint] = useState(false);
 
   const stageRef = useRef<HTMLDivElement>(null);
   const spinningRef = useRef(false);
@@ -97,8 +99,9 @@ export default function HomePage() {
 
     try {
       if (!localStorage.getItem(HINT_KEY)) setShowHint(true);
+      if (!localStorage.getItem(RESULT_HINT_KEY)) setShowResultHint(true);
     } catch {
-      // Private mode / storage blocked — skip the hint rather than crash.
+      // Private mode / storage blocked — skip the hints rather than crash.
     }
 
     Promise.all([
@@ -126,6 +129,16 @@ export default function HomePage() {
     selectedLanguage || null,
     minRating > 0 ? "rating" : null,
   ].filter(Boolean).length;
+
+
+  function dismissResultHint() {
+    setShowResultHint(false);
+    try {
+      localStorage.setItem(RESULT_HINT_KEY, "1");
+    } catch {
+      // Non-critical.
+    }
+  }
 
   function dismissHint() {
     setShowHint(false);
@@ -256,7 +269,7 @@ export default function HomePage() {
   }
 
   return (
-    <main className="relative min-h-screen overflow-hidden px-4 py-10">
+    <main className="relative min-h-screen overflow-hidden px-4 py-10 pb-28 lg:pb-10">
       <PosterWallBackground />
       <div className="hero-spotlight" />
       <ParticleField />
@@ -316,6 +329,23 @@ export default function HomePage() {
               track("watch_provider_clicked", { titleId: state.result?.id, provider })
             }
           />
+
+          {state.stage === "revealed" && showResultHint && (
+            <div className="surface mx-auto mt-5 flex w-full max-w-[340px] items-start gap-3 px-4 py-3">
+              <span aria-hidden="true" className="text-lg leading-none">💡</span>
+              <p className="flex-1 font-body text-sm text-smoke">
+                Not feeling it? Spin again — or hit Save to find it later under ♥ Saved.
+              </p>
+              <button
+                type="button"
+                onClick={dismissResultHint}
+                aria-label="Dismiss tip"
+                className="rounded font-data text-[11px] uppercase tracking-widest text-ash transition hover:text-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold"
+              >
+                Got it
+              </button>
+            </div>
+          )}
         </section>
       </div>
     </main>
