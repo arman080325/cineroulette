@@ -4,12 +4,18 @@
 
 html,
 body {
-  background: #0a0605;
+  background: #080a14;
 }
 
 body {
   font-family: var(--font-body), system-ui, sans-serif;
   position: relative;
+  /* Ambient aurora wash behind everything — the "light through a projector"
+     feel. Two soft neon blooms, fixed so they don't scroll. */
+  background-image:
+    radial-gradient(60% 50% at 15% 0%, rgba(56, 225, 255, 0.10), transparent 70%),
+    radial-gradient(55% 45% at 90% 10%, rgba(255, 77, 141, 0.10), transparent 70%);
+  background-attachment: fixed;
 }
 
 .font-display {
@@ -18,43 +24,43 @@ body {
 }
 
 /* ---------------------------------------------------------------------
-   Film grain — a static SVG-noise layer over the whole app. Subtle on
-   purpose: texture, not a filter effect. Fixed so it doesn't scroll/tile
-   awkwardly on tall pages.
+   Cursor-tracked spotlight. --mx/--my are set from JS (useSpotlight hook);
+   they default to center so it looks intentional before first mouse move.
+   This is the core "interactive light" upgrade — the room lights follow you.
    --------------------------------------------------------------------- */
+.hero-spotlight {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    600px circle at var(--mx, 50%) var(--my, 30%),
+    rgba(56, 225, 255, 0.08),
+    rgba(255, 77, 141, 0.05) 40%,
+    transparent 65%
+  );
+  transition: background 120ms ease-out;
+}
+
+/* Film grain — kept, lightened for the cooler base. */
 .grain-overlay {
   position: fixed;
   inset: 0;
   z-index: 50;
   pointer-events: none;
-  opacity: 0.05;
+  opacity: 0.04;
   mix-blend-mode: overlay;
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
 }
 
-/* Radial spotlight glow behind the hero — replaces a flat black void with
-   the sense of a single house-light over the marquee. */
-.hero-spotlight {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  background: radial-gradient(
-    ellipse 60% 40% at 50% 0%,
-    rgba(200, 16, 46, 0.16),
-    transparent 70%
-  );
-}
-
 /* ---------------------------------------------------------------------
-   Marquee reveal — the signature "in lights" moment (Section 09 polish).
-   A ring of bulbs chases around the result card border once a title locks.
+   Marquee reveal — bulbs now chase in electric cyan instead of gold.
    --------------------------------------------------------------------- */
 .marquee-border {
   position: absolute;
   inset: -10px;
   pointer-events: none;
-  border-radius: 16px;
+  border-radius: 18px;
 }
 
 .marquee-bulb {
@@ -63,7 +69,7 @@ body {
   height: 8px;
   margin: -4px;
   border-radius: 999px;
-  background: #4a4a4a;
+  background: #2a3050;
   box-shadow: none;
   transition: background 0.15s ease, box-shadow 0.15s ease;
 }
@@ -73,38 +79,29 @@ body {
 }
 
 @keyframes bulb-chase {
-  0%,
-  92%,
-  100% {
-    background: #4a4a4a;
+  0%, 92%, 100% {
+    background: #2a3050;
     box-shadow: none;
   }
-  4%,
-  10% {
-    background: #ffd36a;
-    box-shadow: 0 0 8px 2px rgba(255, 211, 106, 0.9), 0 0 16px 4px rgba(255, 211, 106, 0.4);
+  4%, 10% {
+    background: #38e1ff;
+    box-shadow: 0 0 10px 2px rgba(56, 225, 255, 0.95), 0 0 20px 5px rgba(56, 225, 255, 0.45);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .marquee-border--active .marquee-bulb {
     animation: none;
-    background: #ffd36a;
-    box-shadow: 0 0 6px 1px rgba(255, 211, 106, 0.7);
+    background: #38e1ff;
+    box-shadow: 0 0 8px 1px rgba(56, 225, 255, 0.8);
   }
 }
 
-/* Screen-reader-only text — visually hidden but still announced by
-   assistive tech. Used for state changes like ", selected" on mood pills
-   (Section 13 NFR: WCAG 2.1 AA). Defined explicitly rather than relying
-   on Tailwind's built-in sr-only, so it works regardless of Tailwind
-   version/config. */
+/* Screen-reader-only text. */
 .sr-only {
   position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
   overflow: hidden;
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
@@ -112,27 +109,17 @@ body {
 }
 
 @keyframes fadeUp {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 /* ---------------------------------------------------------------------
-   Ticket stub — the result card's signature shape. A perforated divider
-   with punched semicircle notches separates the poster (the "artwork"
-   half of a real cinema ticket) from the showtime-style details below.
-   The notch color must match whatever sits behind the card, so it's set
-   via --ticket-bg per usage context rather than hardcoded.
+   Ticket stub — perforation now cyan-tinted.
    --------------------------------------------------------------------- */
 .ticket-divider {
   position: relative;
   height: 0;
-  border-top: 2px dashed rgba(255, 211, 106, 0.35);
+  border-top: 2px dashed rgba(56, 225, 255, 0.35);
   margin: 0 -1px;
 }
 
@@ -141,77 +128,110 @@ body {
   content: "";
   position: absolute;
   top: -9px;
-  width: 18px;
-  height: 18px;
+  width: 18px; height: 18px;
   border-radius: 999px;
-  background: var(--ticket-bg, #0a0605);
+  background: var(--ticket-bg, #080a14);
 }
 
-.ticket-divider::before {
-  left: -9px;
-}
-
-.ticket-divider::after {
-  right: -9px;
-}
+.ticket-divider::before { left: -9px; }
+.ticket-divider::after { right: -9px; }
 
 /* ---------------------------------------------------------------------
-   Custom range slider — replaces the default OS thumb with a gold-lit
-   one and a marquee-red fill, matching the ticket theme instead of
-   looking like an unstyled browser control.
+   Range slider — magenta→cyan gradient fill, cyan glowing thumb.
    --------------------------------------------------------------------- */
 input[type="range"].styled-range {
   -webkit-appearance: none;
   appearance: none;
   height: 6px;
   border-radius: 999px;
-  background: linear-gradient(to right, #c8102e var(--range-fill, 0%), #262626 var(--range-fill, 0%));
+  background: linear-gradient(
+    to right,
+    #ff4d8d 0%, #38e1ff var(--range-fill, 0%),
+    #1b2038 var(--range-fill, 0%)
+  );
   outline: none;
 }
 
 input[type="range"].styled-range::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 18px;
-  height: 18px;
+  width: 20px; height: 20px;
   border-radius: 999px;
-  background: #ffd36a;
-  border: 2px solid #0a0605;
-  box-shadow: 0 0 8px 2px rgba(255, 211, 106, 0.6);
+  background: #38e1ff;
+  border: 2px solid #080a14;
+  box-shadow: 0 0 10px 3px rgba(56, 225, 255, 0.7);
   cursor: pointer;
-  margin-top: -6px;
+  margin-top: -7px;
 }
 
 input[type="range"].styled-range::-moz-range-thumb {
-  width: 18px;
-  height: 18px;
+  width: 20px; height: 20px;
   border-radius: 999px;
-  background: #ffd36a;
-  border: 2px solid #0a0605;
-  box-shadow: 0 0 8px 2px rgba(255, 211, 106, 0.6);
+  background: #38e1ff;
+  border: 2px solid #080a14;
+  box-shadow: 0 0 10px 3px rgba(56, 225, 255, 0.7);
   cursor: pointer;
 }
 
 input[type="range"].styled-range::-moz-range-track {
   height: 6px;
   border-radius: 999px;
-  background: #262626;
+  background: #1b2038;
 }
 
 /* ---------------------------------------------------------------------
-   Surfaces & skeletons — added in the UX overhaul.
+   Glass surfaces — frosted, luminous edge instead of flat brown panel.
    --------------------------------------------------------------------- */
 .surface {
-  background: #14100e;
-  border: 1px solid rgba(138, 109, 59, 0.35);
-  border-radius: 12px;
+  background: linear-gradient(160deg, rgba(17, 21, 39, 0.9), rgba(8, 10, 20, 0.85));
+  border: 1px solid rgba(58, 65, 102, 0.5);
+  border-radius: 16px;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 8px 32px -8px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(199, 205, 240, 0.06);
+}
+
+/* Interactive glossy card — glare sweep + subtle lift on hover.
+   Add class "glass-card" to any element you want to feel premium & alive. */
+.glass-card {
+  position: relative;
+  overflow: hidden;
+  transition: transform 240ms cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 240ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(120deg, transparent 30%, rgba(56, 225, 255, 0.12) 50%, transparent 70%);
+  transform: translateX(-120%);
+  transition: transform 600ms cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+}
+
+.glass-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 24px 50px -16px rgba(56, 225, 255, 0.25);
+}
+
+.glass-card:hover::before {
+  transform: translateX(120%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .glass-card,
+  .glass-card::before {
+    transition: none;
+  }
+  .glass-card:hover { transform: none; }
+  .glass-card:hover::before { transform: translateX(-120%); }
 }
 
 .skeleton {
   position: relative;
   overflow: hidden;
-  background: rgba(138, 109, 59, 0.12);
-  border-radius: 8px;
+  background: rgba(58, 65, 102, 0.18);
+  border-radius: 10px;
 }
 
 .skeleton::after {
@@ -219,42 +239,47 @@ input[type="range"].styled-range::-moz-range-track {
   position: absolute;
   inset: 0;
   transform: translateX(-100%);
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(255, 211, 106, 0.08),
-    transparent
-  );
+  background: linear-gradient(90deg, transparent, rgba(56, 225, 255, 0.1), transparent);
   animation: shimmer 1.6s infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .skeleton::after {
-    animation: none;
-  }
+  .skeleton::after { animation: none; }
 }
 
-/* Dotted rule for unfilled ticket fields */
 .stub-rule {
   flex: 1;
-  border-bottom: 1px dotted rgba(138, 109, 59, 0.55);
+  border-bottom: 1px dotted rgba(58, 65, 102, 0.7);
   margin-bottom: 4px;
 }
 
-/* Skip link — visible only on keyboard focus */
+/* Skip link — cyan pill. */
 .skip-link {
   position: absolute;
-  left: 12px;
-  top: -60px;
+  left: 12px; top: -60px;
   z-index: 100;
   padding: 10px 16px;
   border-radius: 999px;
-  background: #ffd36a;
-  color: #0a0605;
+  background: #38e1ff;
+  color: #080a14;
   font-weight: 600;
   transition: top 160ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.skip-link:focus {
-  top: 12px;
+.skip-link:focus { top: 12px; }
+
+/* ---------------------------------------------------------------------
+   Neon sign text — for the brand wordmark. Layered cyan glow that
+   subtly flickers like a real sign.
+   --------------------------------------------------------------------- */
+.neon-text {
+  color: #eaf7ff;
+  text-shadow:
+    0 0 6px rgba(56, 225, 255, 0.8),
+    0 0 18px rgba(56, 225, 255, 0.5),
+    0 0 40px rgba(255, 77, 141, 0.35);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .neon-text { animation: neon-flicker 6s linear infinite; }
 }

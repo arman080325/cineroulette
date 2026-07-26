@@ -8,6 +8,7 @@ import { StagePanel } from "@/components/StagePanel";
 import type { SpinReelResult } from "@/components/SpinReel";
 import { getSessionId } from "@/lib/session";
 import { track } from "@/lib/analytics-client";
+import { SpinButton } from "@/components/SpinButton";
 
 type Stage = "idle" | "revving" | "spinning" | "revealed" | "empty" | "error";
 
@@ -269,15 +270,16 @@ export default function HomePage() {
   }
 
   return (
-    <main className="relative min-h-screen overflow-hidden px-4 py-10 pb-28 lg:pb-10">
+<main className="relative min-h-screen overflow-hidden px-4 py-10 pb-28 lg:pb-16">
       <PosterWallBackground />
       <div className="hero-spotlight" />
       <ParticleField />
 
-      <div className="relative z-10 mx-auto grid max-w-7xl grid-cols-1 gap-12 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] lg:gap-16">
-        <section aria-label="Choose your filters" className="order-2 lg:order-1">
+      <div className="relative z-10 mx-auto grid max-w-6xl grid-cols-1 gap-10 lg:grid-cols-[340px_1fr] lg:items-start lg:gap-12">
+        {/* Left: filters, sticky so it stays in view while the stage updates */}
+        <section aria-label="Choose your filters" className="order-2 flex flex-col items-center lg:sticky lg:top-20 lg:order-1 lg:items-stretch">
           {showHint && (
-            <div className="surface mb-6 flex w-full max-w-[340px] items-start gap-3 px-4 py-3 lg:max-w-none">
+            <div className="surface mb-5 flex w-full max-w-[380px] items-start gap-3 px-4 py-3 lg:max-w-none">
               <span aria-hidden="true" className="text-lg leading-none">🎟️</span>
               <p className="flex-1 font-body text-sm text-smoke">
                 Pick a mood, or just spin. Press <kbd className="rounded border border-brass/50 px-1.5 py-0.5 font-data text-[11px] text-gold">S</kbd> any time.
@@ -286,7 +288,7 @@ export default function HomePage() {
                 type="button"
                 onClick={dismissHint}
                 aria-label="Dismiss hint"
-                className="rounded font-data text-[11px] uppercase tracking-widest text-ash transition hover:text-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold"
+                className="rounded font-data text-[11px] uppercase tracking-[0.2em] text-ash transition hover:text-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold"
               >
                 Got it
               </button>
@@ -313,7 +315,8 @@ export default function HomePage() {
           />
         </section>
 
-        <section aria-label="Your pick" className="order-1 lg:order-2" ref={stageRef}>
+        {/* Right: the stage. Spin sits right under the poster — no scroll to reach it. */}
+        <section aria-label="Your pick" className="order-1 flex flex-col items-center gap-6 lg:order-2" ref={stageRef}>
           <StagePanel
             stage={state.stage}
             result={state.result}
@@ -330,8 +333,12 @@ export default function HomePage() {
             }
           />
 
+          {state.stage === "idle" && (
+            <SpinButton spinning={false} onSpin={spin} />
+          )}
+
           {state.stage === "revealed" && showResultHint && (
-            <div className="surface mx-auto mt-5 flex w-full max-w-[340px] items-start gap-3 px-4 py-3">
+            <div className="surface mx-auto w-full max-w-[380px] flex items-start gap-3 px-4 py-3">
               <span aria-hidden="true" className="text-lg leading-none">💡</span>
               <p className="flex-1 font-body text-sm text-smoke">
                 Not feeling it? Spin again — or hit Save to find it later under ♥ Saved.
@@ -340,7 +347,7 @@ export default function HomePage() {
                 type="button"
                 onClick={dismissResultHint}
                 aria-label="Dismiss tip"
-                className="rounded font-data text-[11px] uppercase tracking-widest text-ash transition hover:text-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold"
+                className="rounded font-data text-[11px] uppercase tracking-[0.2em] text-ash transition hover:text-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold"
               >
                 Got it
               </button>
