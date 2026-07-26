@@ -3,25 +3,28 @@
 import { useState } from "react";
 import { SearchBar } from "./SearchBar";
 import { SavedDrawer } from "./SavedDrawer";
+import { SupportButton } from "./SupportButton";
 
 export function AppHeader() {
   const [savedOpen, setSavedOpen] = useState(false);
 
   return (
     <>
-      <header className="sticky top-0 z-40 border-b border-brass/25 bg-velvet/85 backdrop-blur-md">
-        <div className="mx-auto flex max-w-7xl items-center gap-4 px-4 py-3">
-        <a  
+      <header className="sticky top-0 z-40 border-b border-brass/25 bg-velvet/80 backdrop-blur-md">
+        <div className="mx-auto flex max-w-5xl items-center gap-3 px-4 py-3 sm:gap-4">
+          <a
             href="/"
             className="flex shrink-0 items-center gap-2 rounded font-display text-2xl tracking-wide text-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold"
           >
             <span aria-hidden="true">◉</span>
-            <span className="hidden sm:inline">CineRoulette</span>
+            <span className="hidden neon-text sm:inline">CineRoulette</span>
           </a>
 
           <div className="min-w-0 flex-1">
             <SearchBar />
           </div>
+
+          <SupportButton />
 
           <button
             type="button"

@@ -5,17 +5,11 @@ import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { AnalyticsInit } from "@/components/AnalyticsInit";
 import { AppHeader } from "@/components/AppHeader";
+import { SpotlightProvider } from "@/components/SpotlightProvider";
 
 const display = Bebas_Neue({ weight: "400", subsets: ["latin"], variable: "--font-display" });
 const body = Inter({ subsets: ["latin"], variable: "--font-body" });
-
-// Ticket stubs are printed in monospace — this grounds the metaphor in a
-// real material detail and gives numeric data its own voice.
-const data = IBM_Plex_Mono({
-  weight: ["400", "500"],
-  subsets: ["latin"],
-  variable: "--font-data",
-});
+const data = IBM_Plex_Mono({ weight: ["400", "500"], subsets: ["latin"], variable: "--font-data" });
 
 export const metadata: Metadata = {
   title: "CineRoulette — Stop Searching. Start Watching.",
@@ -35,6 +29,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" className={`${display.variable} ${body.variable} ${data.variable}`}>
       <body className="bg-velvet text-smoke">
         <AnalyticsInit />
+        <SpotlightProvider />
         <a href="#stage" className="skip-link">Skip to result</a>
         <div className="grain-overlay" aria-hidden="true" />
         <AppHeader />
