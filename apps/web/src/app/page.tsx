@@ -270,7 +270,7 @@ export default function HomePage() {
   }
 
   return (
-<main className="relative min-h-screen overflow-hidden px-4 py-10 pb-28 lg:pb-16">
+    <main className="relative min-h-screen overflow-hidden px-4 py-10 pb-28 lg:pb-16">
       <PosterWallBackground />
       <div className="hero-spotlight" />
       <ParticleField />
@@ -312,6 +312,7 @@ export default function HomePage() {
             onSpin={spin}
             onClearAll={clearAll}
             activeCount={activeCount}
+            showMobileSpin={state.stage !== "revealed"}
           />
         </section>
 

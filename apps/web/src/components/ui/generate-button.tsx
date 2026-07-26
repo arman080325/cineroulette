@@ -4,26 +4,26 @@ import React, { useState } from "react";
 import { cn } from "@/lib/utils";
 
 export interface GenerateButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  idleText?: string;
-  activeText?: string;
-  isGenerating?: boolean;
+    idleText?: string;
+    activeText?: string;
+    isGenerating?: boolean;
 }
 
 export function GenerateButton({
-  idleText = "Spin Again",
-  activeText = "Spinning",
-  isGenerating: controlledIsGenerating,
-  className,
-  onClick,
-  ...props
+    idleText = "Spin Again",
+    activeText = "Spinning",
+    isGenerating: controlledIsGenerating,
+    className,
+    onClick,
+    ...props
 }: GenerateButtonProps) {
-  const [isFocused, setIsFocused] = useState(false);
-  const isGenerating = controlledIsGenerating !== undefined ? controlledIsGenerating : isFocused;
+    const [isFocused, setIsFocused] = useState(false);
+    const isGenerating = controlledIsGenerating !== undefined ? controlledIsGenerating : isFocused;
 
-  return (
-    <div className="relative inline-block">
-      <style>{`
-        .gen-btn {
+    return (
+        <div className="relative inline-block">
+            <style>{`
+.gen-btn {
           --radius: 22px;
           --pad: 4px;
           --transition: 0.4s;
@@ -35,10 +35,11 @@ export function GenerateButton({
           align-items: center;
           justify-content: center;
           gap: 0.6rem;
-          padding: 0.95em 1.9em;
-          font-family: var(--font-body);
-          font-size: 1.15rem;
-          font-weight: 500;
+          padding: 0.85em 1.9em;
+          font-family: var(--font-display);
+          font-size: 1.55rem;
+          font-weight: 400;
+          text-transform: uppercase;
 
           background-color: #0d0f1c;
           border: solid 1px rgba(255,255,255,0.14);
@@ -76,14 +77,15 @@ export function GenerateButton({
           50% { transform: scale(1.14); }
         }
 
-        .gen-btn-letter {
+          .gen-btn-letter {
           position: relative;
           display: inline-block;
+          letter-spacing: 0.02em;
           color: rgba(255,255,255,0.4);
           animation: gen-letter-anim 2.2s ease-in-out infinite;
           transition: color var(--transition), text-shadow var(--transition);
         }
-
+          
         @keyframes gen-letter-anim {
           50% {
             text-shadow: 0 0 6px rgba(255,255,255,0.5);
@@ -170,42 +172,42 @@ export function GenerateButton({
         }
       `}</style>
 
-      <button
-        type="button"
-        className={cn(
-          "gen-btn text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold",
-          className
-        )}
-        data-generating={isGenerating}
-        onFocus={() => setIsFocused(true)}
-        onBlur={() => setIsFocused(false)}
-        onClick={(e) => {
-          setIsFocused(true);
-          onClick?.(e);
-        }}
-        {...props}
-      >
-        <span className="gen-btn-icon" aria-hidden="true">🎬</span>
+            <button
+                type="button"
+                className={cn(
+                    "gen-btn text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold",
+                    className
+                )}
+                data-generating={isGenerating}
+                onFocus={() => setIsFocused(true)}
+                onBlur={() => setIsFocused(false)}
+                onClick={(e) => {
+                    setIsFocused(true);
+                    onClick?.(e);
+                }}
+                {...props}
+            >
+                <span className="gen-btn-icon" aria-hidden="true">🎬</span>
 
-        <div className="gen-txt-wrapper">
-          <div className="gen-txt-1">
-            {idleText.split("").map((letter, i) => (
-              <span key={`t1-${i}`} className="gen-btn-letter">
-                {letter === " " ? "\u00A0" : letter}
-              </span>
-            ))}
-          </div>
-          <div className="gen-txt-2">
-            {activeText.split("").map((letter, i) => (
-              <span key={`t2-${i}`} className="gen-btn-letter">
-                {letter === " " ? "\u00A0" : letter}
-              </span>
-            ))}
-          </div>
+                <div className="gen-txt-wrapper">
+                    <div className="gen-txt-1">
+                        {idleText.split("").map((letter, i) => (
+                            <span key={`t1-${i}`} className="gen-btn-letter">
+                                {letter === " " ? "\u00A0" : letter}
+                            </span>
+                        ))}
+                    </div>
+                    <div className="gen-txt-2">
+                        {activeText.split("").map((letter, i) => (
+                            <span key={`t2-${i}`} className="gen-btn-letter">
+                                {letter === " " ? "\u00A0" : letter}
+                            </span>
+                        ))}
+                    </div>
+                </div>
+            </button>
         </div>
-      </button>
-    </div>
-  );
+    );
 }
 
 export default GenerateButton;

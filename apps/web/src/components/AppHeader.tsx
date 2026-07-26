@@ -4,6 +4,7 @@ import { useState } from "react";
 import { SearchBar } from "./SearchBar";
 import { SavedDrawer } from "./SavedDrawer";
 import { SupportButton } from "./SupportButton";
+import { Logo } from "./Logo";
 
 export function AppHeader() {
   const [savedOpen, setSavedOpen] = useState(false);
@@ -14,9 +15,9 @@ export function AppHeader() {
         <div className="mx-auto flex max-w-5xl items-center gap-3 px-4 py-3 sm:gap-4">
           <a
             href="/"
-            className="flex shrink-0 items-center gap-2 rounded font-display text-2xl tracking-wide text-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold"
+            className="flex shrink-0 items-center gap-2.5 rounded font-display text-2xl tracking-wide text-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold"
           >
-            <span aria-hidden="true">◉</span>
+            <Logo size={30} />
             <span className="hidden neon-text sm:inline">CineRoulette</span>
           </a>
 

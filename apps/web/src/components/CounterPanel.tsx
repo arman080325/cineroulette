@@ -32,6 +32,9 @@ export interface CounterProps {
   onSpin: () => void;
   onClearAll: () => void;
   activeCount: number;
+  // Once a result is revealed, the ResultTicket's own "Spin Again" button
+  // takes over — the sticky mobile bar hides so the two don't show at once.
+  showMobileSpin: boolean;
 }
 
 export function CounterPanel(p: CounterProps) {
@@ -140,16 +143,21 @@ export function CounterPanel(p: CounterProps) {
 
       {/* Sticky bottom bar — mobile only. Desktop's Spin button now lives
           next to the poster instead, so it's never a scroll away. */}
-      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-brass/30 bg-velvet/95 px-4 py-3 backdrop-blur-md lg:hidden">
-        <button
-          type="button"
-          onClick={p.onSpin}
-          disabled={p.spinning}
-          className="w-full min-h-[56px] animate-gradient-pan rounded-2xl bg-gradient-to-r from-marquee via-[#ff8fc0] to-gold bg-[length:220%_220%] py-4 font-display text-xl tracking-wide text-velvet shadow-[0_0_24px_5px_rgba(255,77,141,0.5)] transition-shadow duration-300 hover:shadow-[0_0_32px_8px_rgba(255,77,141,0.65)] disabled:opacity-60 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-gold"
-        >
-          {p.spinning ? "Spinning…" : "Spin the roulette"}
-        </button>
-      </div>
+{/* Sticky bottom bar — mobile only, and only before a result exists.
+          Once revealed, ResultTicket's own Spin Again button is the single
+          source of truth for spinning, so this hides instead of doubling up. */}
+      {p.showMobileSpin && (
+        <div className="fixed inset-x-0 bottom-0 z-30 border-t border-brass/30 bg-velvet/95 px-4 py-3 backdrop-blur-md lg:hidden">
+          <button
+            type="button"
+            onClick={p.onSpin}
+            disabled={p.spinning}
+            className="w-full min-h-[56px] animate-gradient-pan rounded-2xl bg-gradient-to-r from-marquee via-[#ff8fc0] to-gold bg-[length:220%_220%] py-4 font-display text-xl tracking-wide text-velvet shadow-[0_0_24px_5px_rgba(255,77,141,0.5)] transition-shadow duration-300 hover:shadow-[0_0_32px_8px_rgba(255,77,141,0.65)] disabled:opacity-60 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-gold"
+          >
+            {p.spinning ? "Spinning…" : "Spin the roulette"}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
