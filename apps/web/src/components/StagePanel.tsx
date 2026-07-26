@@ -2,6 +2,7 @@
 
 import { SpinReel, type SpinReelResult } from "./SpinReel";
 import { ResultTicket } from "./ResultTicket";
+import { RevvingReel } from "./RevvingReel";
 
 type Stage = "idle" | "revving" | "spinning" | "revealed" | "empty" | "error";
 
@@ -30,12 +31,7 @@ export function StagePanel(p: Props) {
         </div>
       )}
 
-      {p.stage === "revving" && (
-        <div role="status" aria-live="polite" className="flex flex-col items-center gap-3 py-16 text-ash">
-          <div className="h-10 w-10 animate-spin rounded-full border-2 border-gold border-t-transparent" aria-hidden="true" />
-          <span className="font-data text-xs uppercase tracking-widest">Revving up the reel</span>
-        </div>
-      )}
+      {p.stage === "revving" && <RevvingReel />}
 
       {(p.stage === "empty" || p.stage === "error") && (
         <div className="surface flex w-full max-w-[340px] flex-col items-center gap-4 px-6 py-12 text-center">

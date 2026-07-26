@@ -61,11 +61,10 @@ export function CounterPanel(p: CounterProps) {
                   type="button"
                   onClick={() => p.setMood(p.mood === m.label ? null : m.label)}
                   aria-pressed={p.mood === m.label}
-                  className={`flex min-h-[40px] items-center gap-1.5 rounded-pill border px-3 py-2 font-body text-xs transition duration-200 ease-ui active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold ${
-                    p.mood === m.label
+                  className={`flex min-h-[40px] items-center gap-1.5 rounded-pill border px-3 py-2 font-body text-xs transition duration-200 ease-ui active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold ${p.mood === m.label
                       ? "border-marquee bg-marquee/90 text-velvet shadow-glow"
                       : "border-brass/50 text-smoke hover:-translate-y-0.5 hover:border-gold/60 hover:text-gold"
-                  }`}
+                    }`}
                 >
                   <span aria-hidden="true">{m.icon}</span>
                   {m.label}
@@ -146,7 +145,7 @@ export function CounterPanel(p: CounterProps) {
           type="button"
           onClick={p.onSpin}
           disabled={p.spinning}
-          className="w-full min-h-[56px] rounded-2xl bg-gradient-to-r from-marquee to-[#ff7aa8] py-4 font-display text-xl tracking-wide text-velvet transition hover:brightness-110 disabled:opacity-60 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-gold"
+          className="w-full min-h-[56px] animate-gradient-pan rounded-2xl bg-gradient-to-r from-marquee via-[#ff8fc0] to-gold bg-[length:220%_220%] py-4 font-display text-xl tracking-wide text-velvet shadow-[0_0_24px_5px_rgba(255,77,141,0.5)] transition-shadow duration-300 hover:shadow-[0_0_32px_8px_rgba(255,77,141,0.65)] disabled:opacity-60 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-gold"
         >
           {p.spinning ? "Spinning…" : "Spin the roulette"}
         </button>
