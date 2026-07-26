@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import type { SpinReelResult } from "./SpinReel";
+import { GenerateButton } from "./ui/generate-button";
 
 interface Props {
   result: SpinReelResult;
@@ -93,13 +94,7 @@ export function ResultTicket(p: Props) {
         )}
 
         <div className="mt-6 flex flex-wrap justify-center gap-2.5 font-body text-sm">
-          <button
-            type="button"
-            onClick={p.onSpinAgain}
-            className="min-h-[44px] rounded-2xl bg-marquee px-5 py-2.5 font-medium text-white shadow-glow transition hover:brightness-110 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold"
-          >
-            Spin again
-          </button>
+        <GenerateButton onClick={p.onSpinAgain} idleText="Spin Again" activeText="Spinning" />
 
           <button
             type="button"
