@@ -62,8 +62,8 @@ export function CounterPanel(p: CounterProps) {
                   onClick={() => p.setMood(p.mood === m.label ? null : m.label)}
                   aria-pressed={p.mood === m.label}
                   className={`flex min-h-[40px] items-center gap-1.5 rounded-pill border px-3 py-2 font-body text-xs transition duration-200 ease-ui active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold ${p.mood === m.label
-                      ? "border-marquee bg-marquee/90 text-velvet shadow-glow"
-                      : "border-brass/50 text-smoke hover:-translate-y-0.5 hover:border-gold/60 hover:text-gold"
+                    ? "border-marquee bg-marquee/90 text-velvet shadow-glow"
+                    : "border-brass/50 text-smoke hover:-translate-y-0.5 hover:border-gold/60 hover:text-gold"
                     }`}
                 >
                   <span aria-hidden="true">{m.icon}</span>
