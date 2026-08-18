@@ -3,6 +3,7 @@
 import { SpinReel, type SpinReelResult } from "./SpinReel";
 import { ResultTicket } from "./ResultTicket";
 import { RevvingReel } from "./RevvingReel";
+import { MarqueePresets, type PresetFilter } from "./MarqueePresets";
 
 type Stage = "idle" | "revving" | "spinning" | "revealed" | "empty" | "error";
 
@@ -18,16 +19,15 @@ interface Props {
   onNotForMe: () => void;
   onChangeFilters: () => void;
   onWatchClick: (provider: string) => void;
+  onSelectPreset: (preset: PresetFilter) => void;
 }
 
 export function StagePanel(p: Props) {
   return (
     <div id="stage" className="flex w-full flex-col items-center">
       {p.stage === "idle" && (
-        <div className="surface flex w-full max-w-[340px] flex-col items-center gap-3 px-6 py-14 text-center">
-          <span className="text-5xl opacity-70" aria-hidden="true">🎟️</span>
-          <p className="font-display text-2xl tracking-wide text-smoke">Nothing showing yet</p>
-          <p className="font-body text-sm text-ash">Pick a mood, or just spin. Either works.</p>
+        <div className="flex w-full flex-col items-center gap-6">
+          <MarqueePresets onSelectPreset={p.onSelectPreset} />
         </div>
       )}
 
@@ -35,6 +35,7 @@ export function StagePanel(p: Props) {
 
       {(p.stage === "empty" || p.stage === "error") && (
         <div className="surface flex w-full max-w-[340px] flex-col items-center gap-4 px-6 py-12 text-center">
+          <span className="text-4xl opacity-80" aria-hidden="true">🎟️</span>
           <p className="font-body text-sm text-smoke">{p.message}</p>
           <button
             type="button"

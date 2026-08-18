@@ -50,24 +50,16 @@ function NearMissCard() {
   );
 }
 
+import { MoviePoster } from "./MoviePoster";
+
 function PosterCard({ result }: { result: SpinReelResult }) {
-  const src = result.posterPath ? `https://image.tmdb.org/t/p/w500${result.posterPath}` : null;
   return (
     <div className="h-full w-full rounded-card overflow-hidden border border-brass/30 bg-ink relative shadow-glow">
-      {src ? (
-        <Image
-          src={src}
-          alt={result.title}
-          fill
-          sizes="(max-width: 640px) 300px, 340px"
-          className="object-cover"
-          priority
-        />
-      ) : (
-        <div className="h-full w-full flex items-center justify-center bg-gradient-to-br from-marquee/40 to-velvet p-6">
-          <span className="font-display text-4xl text-center leading-tight text-smoke">{result.title}</span>
-        </div>
-      )}
+      <MoviePoster
+        title={result.title}
+        posterPath={result.posterPath}
+        priority
+      />
     </div>
   );
 }
