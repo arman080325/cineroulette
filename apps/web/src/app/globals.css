@@ -283,3 +283,19 @@ input[type="range"].styled-range::-moz-range-track {
 @media (prefers-reduced-motion: no-preference) {
   .neon-text { animation: neon-flicker 6s linear infinite; }
 }
+
+/* Custom Cinema Scrollbar */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 5px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(8, 10, 20, 0.6);
+  border-radius: 999px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(58, 65, 102, 0.6);
+  border-radius: 999px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #38e1ff;
+}

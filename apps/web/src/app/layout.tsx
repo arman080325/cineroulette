@@ -6,6 +6,7 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import { AnalyticsInit } from "@/components/AnalyticsInit";
 import { AppHeader } from "@/components/AppHeader";
 import { SpotlightProvider } from "@/components/SpotlightProvider";
+import { ToastContainer } from "@/components/ToastContainer";
 
 const display = Bebas_Neue({ weight: "400", subsets: ["latin"], variable: "--font-display" });
 const body = Inter({ subsets: ["latin"], variable: "--font-body" });
@@ -30,6 +31,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="bg-velvet text-smoke">
         <AnalyticsInit />
         <SpotlightProvider />
+        <ToastContainer />
         <a href="#stage" className="skip-link">Skip to result</a>
         <div className="grain-overlay" aria-hidden="true" />
         <AppHeader />

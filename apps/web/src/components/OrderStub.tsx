@@ -5,12 +5,15 @@ interface OrderStubProps {
   genre: string | null;
   language: string | null;
   minRating: number;
+  runtime?: string | null;
+  era?: string | null;
+  provider?: string | null;
   serial: string;
 }
 
-function Field({ label, value }: { label: string; value: string | null }) {
+function Field({ label, value }: { label: string; value: string | null | undefined }) {
   return (
-    <div className="grid grid-cols-[64px_1fr] items-center gap-3">
+    <div className="grid grid-cols-[68px_1fr] items-center gap-3">
       <span className="font-data text-[10px] uppercase tracking-[0.2em] text-ash">
         {label}
       </span>
@@ -24,7 +27,16 @@ function Field({ label, value }: { label: string; value: string | null }) {
   );
 }
 
-export function OrderStub({ mood, genre, language, minRating, serial }: OrderStubProps) {
+export function OrderStub({
+  mood,
+  genre,
+  language,
+  minRating,
+  runtime,
+  era,
+  provider,
+  serial,
+}: OrderStubProps) {
   return (
     <div
       className="surface glass-card w-full max-w-[380px] px-6 py-5 lg:max-w-none"
@@ -39,11 +51,14 @@ export function OrderStub({ mood, genre, language, minRating, serial }: OrderStu
 
       <div className="ticket-divider mb-4" />
 
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-2.5">
         <Field label="Mood" value={mood} />
         <Field label="Genre" value={genre} />
         <Field label="Lang" value={language} />
         <Field label="Rating" value={minRating > 0 ? `${minRating}.0+` : null} />
+        {runtime && <Field label="Length" value={runtime} />}
+        {era && <Field label="Era" value={era} />}
+        {provider && <Field label="Stream" value={provider} />}
       </div>
 
       <div className="ticket-divider my-4" />
